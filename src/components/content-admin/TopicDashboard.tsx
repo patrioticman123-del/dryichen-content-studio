@@ -54,7 +54,7 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
             key={value}
             onClick={() => setFilter(value)}
             className={`min-h-11 rounded-xl px-4 py-2 text-sm font-bold ${
-              filter === value ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-300'
+              filter === value ? 'bg-teal-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
             }`}
           >
             {label}
@@ -62,17 +62,17 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
         ))}
       </nav>
 
-      {error && <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</div>}
+      {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
 
       <div className="space-y-3">
         {visibleTopics.map((topic) => (
-          <article key={topic.id} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-lg sm:p-5">
+          <article key={topic.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-cyan-300">{topic.category}</span>
-                <h2 className="mt-1 text-lg font-black leading-7 text-white">{topic.title}</h2>
+                <span className="text-xs font-bold text-teal-600">{topic.category}</span>
+                <h2 className="mt-1 text-lg font-black leading-7 text-slate-900">{topic.title}</h2>
               </div>
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-lg font-black text-cyan-300" aria-label={`議題分數 ${topic.score.total}`}>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-lg font-black text-teal-700" aria-label={`議題分數 ${topic.score.total}`}>
                 {topic.score.total}
               </div>
             </div>
@@ -81,21 +81,21 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
               <button
                 disabled={busyId === topic.id}
                 onClick={() => updateStatus(topic.id, 'saved')}
-                className="min-h-12 rounded-xl border border-slate-600 px-3 text-sm font-bold text-slate-200 disabled:opacity-50"
+                className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 收藏
               </button>
               <button
                 disabled={busyId === topic.id}
                 onClick={() => updateStatus(topic.id, 'dismissed')}
-                className="min-h-12 rounded-xl border border-slate-700 px-3 text-sm font-bold text-slate-400 disabled:opacity-50"
+                className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-50"
               >
                 忽略
               </button>
               <button
                 disabled={busyId === topic.id}
                 onClick={() => topic.articleId ? router.push(`/admin/articles/${topic.articleId}/preview`) : generate(topic.id)}
-                className="col-span-2 min-h-12 rounded-xl bg-cyan-400 px-4 text-sm font-black text-slate-950 disabled:opacity-50"
+                className="col-span-2 min-h-12 rounded-xl bg-teal-600 px-4 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
               >
                 {busyId === topic.id ? '處理中…' : topic.articleId ? '開啟文章預覽' : '生成文章'}
               </button>
@@ -104,7 +104,7 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
         ))}
 
         {!visibleTopics.length && (
-          <div className="rounded-2xl border border-dashed border-slate-700 p-10 text-center text-sm text-slate-500">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
             這個分類目前沒有議題。
           </div>
         )}
