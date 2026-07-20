@@ -1,0 +1,64 @@
+{
+  "name": "dr-lin-rehab",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "go": "git add . && git commit -m \"Update: Optimization config\" && git push"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-brands-svg-icons": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
+    "@google/generative-ai": "^0.24.1",
+    "@keystatic/core": "^0.5.48",
+    "@keystatic/next": "^5.0.4",
+    "@supabase/supabase-js": "^2.108.2",
+    "@vercel/postgres": "^0.10.0",
+    "fs-extra": "^11.3.3",
+    "googleapis": "^173.0.0",
+    "html-react-parser": "^5.2.15",
+    "next": "^14.2.0",
+    "openai": "^6.16.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-icons": "^5.5.0",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  },
+  "browserslist": [
+    "defaults",
+    "not IE 11",
+    "not op_mini all",
+    "> 0.5%",
+    "fully supports es6-module"
+  ],
+  "description": "使用 Next.js 14+ (App Router)、TypeScript 和 Tailwind CSS 建構的靜態網站，支援 GitHub Pages 部署。",
+  "main": "next-sitemap.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chenshinrehab/dryichen.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/chenshinrehab/dryichen/issues"
+  },
+  "homepage": "https://github.com/chenshinrehab/dryichen#readme"
+}

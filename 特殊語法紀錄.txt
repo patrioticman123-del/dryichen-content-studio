@@ -1,0 +1,33 @@
+npm run dev
+
+http://localhost:3000/weight-bone
+
+
+npm run dev
+
+當您去購買網域（例如 chenshin-rehab.com.tw）並綁定 Vercel 後，請務必記得做這最後一件事：
+
+回到您的程式碼：
+
+src/app/page.tsx (Metadata): 修改 metadataBase 為新網域。
+
+src/app/robots.ts: 修改 baseUrl 為新網域。
+
+src/app/sitemap.ts: 修改 baseUrl 為新網域。
+
+為什麼？ 如果您不改，Google 收錄的 Sitemap 連結會一直
+
+      { src: '/images/treatments/prp/a.jpg', alt: 'PRP高濃度血小板注射標準流程圖' },
+      src="/images/about/a.jpg"
+
+我的檔案放在/images/about/a.jpg，下面程式碼我要如何修改 image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=800',
+
+image: '/images/about/a.jpg',
+
+216.198.79.1
+
+cec110f66bebbea9.vercel-dns-017.com.
+
+https://www.dryichen.com.tw
+
+Ctrl + Shift + I  Ctrl + Shift + M

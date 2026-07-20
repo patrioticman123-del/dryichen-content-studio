@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+}
+
+/* 1. 顯式定義基礎樣式 */
+@layer base {
+  html, body {
+    /* ✨ 新增：阻止 iOS 瀏覽器整頁被拖曳反彈的橡皮筋效果與下拉重新整理 */
+    overscroll-behavior: none;
+  }
+
+  /* 解決 H1UserAgentFontSizeInSection 警告 */
+  h1 {
+    @apply text-4xl font-bold mb-4; /* 這裡可以使用你喜歡的 Tailwind class */
+    font-size: 2.25rem; /* 顯式指定字體大小 */
+  }
+  h2 {
+    @apply text-3xl font-bold mb-3;
+    font-size: 1.875rem;
+  }
+  h3 {
+    @apply text-2xl font-bold mb-2;
+    font-size: 1.5rem;
+  }
+  /* 即使標題在 section, article 內，也強制維持設定的大小 */
+  section h1, article h1, nav h1, aside h1 {
+    font-size: 2.25rem;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+/* 確保移動端底部導航有足夠空間 */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 0;
+  }
+}
