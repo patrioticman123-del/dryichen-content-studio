@@ -24,6 +24,14 @@ export function passwordMatches(input: string): boolean {
   return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
+export function publishPasswordMatches(input: string): boolean {
+  const expected = (process.env.CONTENT_PUBLISH_PASSWORD || process.env.CONTENT_ADMIN_PASSWORD)?.trim();
+  if (!expected) return false;
+  const actualBuffer = Buffer.from(input);
+  const expectedBuffer = Buffer.from(expected);
+  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
 export function createSessionToken(): string {
   const secret = getSecret();
   if (!secret) throw new Error('CONTENT_ADMIN_SESSION_SECRET 尚未設定或長度不足 32 字元。');

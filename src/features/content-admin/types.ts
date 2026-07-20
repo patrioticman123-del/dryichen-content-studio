@@ -1,5 +1,5 @@
 export type TopicStatus = 'new' | 'saved' | 'dismissed' | 'generating' | 'drafting';
-export type ArticleStatus = 'drafting' | 'reviewing' | 'approved' | 'failed';
+export type ArticleStatus = 'drafting' | 'reviewing' | 'approved' | 'published' | 'failed';
 
 export interface TopicScore {
   timeliness: number;
@@ -62,6 +62,7 @@ export interface GeneratedArticle {
   createdAt: string;
   updatedAt: string;
   approvedAt?: string;
+  publishedAt?: string;
 }
 
 export interface ContentAdminStore {

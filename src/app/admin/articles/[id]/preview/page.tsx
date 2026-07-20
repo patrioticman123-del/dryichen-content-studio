@@ -2,14 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import AdminHeader from '@/components/content-admin/AdminHeader';
 import ReviewPanel from '@/components/content-admin/ReviewPanel';
-import { requireAdminPage } from '@/features/content-admin/auth-server';
 import { getArticle } from '@/features/content-admin/repository';
 import { runApprovalChecks } from '@/features/content-admin/scoring';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ArticlePreviewPage({ params }: { params: { id: string } }) {
-  requireAdminPage();
   const article = await getArticle(params.id);
   if (!article) notFound();
   const version = article.versions.find((item) => item.version === article.currentVersion) || article.versions[0];

@@ -171,3 +171,17 @@ export async function approveArticle(id: string): Promise<GeneratedArticle | nul
   await writeStore(store);
   return article;
 }
+
+export async function publishArticle(id: string): Promise<GeneratedArticle | null> {
+  if (process.env.CONTENT_ADMIN_STORAGE === 'postgres') {
+    return (await import('./postgres-repository')).publishPostgresArticle(id);
+  }
+  const store = await readStore();
+  const article = store.articles.find((item) => item.id === id && item.status === 'approved');
+  if (!article) return null;
+  article.status = 'published';
+  article.publishedAt = new Date().toISOString();
+  article.updatedAt = article.publishedAt;
+  await writeStore(store);
+  return article;
+}

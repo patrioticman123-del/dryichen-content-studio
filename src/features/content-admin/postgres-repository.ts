@@ -53,6 +53,7 @@ async function initializeDatabase(): Promise<void> {
       approved_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await db.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`);
     await db.query(`CREATE TABLE IF NOT EXISTS article_versions (
       id TEXT PRIMARY KEY, article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
       version INTEGER NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, seo JSONB NOT NULL,
@@ -161,6 +162,7 @@ type ArticleRow = {
   id: string; topic_id: string; slug: string; category: GeneratedArticle['category'];
   status: GeneratedArticle['status']; current_version: number; created_at: Date | string;
   updated_at: Date | string; approved_at: Date | string | null;
+  published_at: Date | string | null;
 };
 
 type VersionRow = {
@@ -181,6 +183,7 @@ function mapArticle(row: ArticleRow, versionRows: VersionRow[]): GeneratedArticl
       createdAt: iso(item.created_at)!,
     })),
     createdAt: iso(row.created_at)!, updatedAt: iso(row.updated_at)!, approvedAt: iso(row.approved_at),
+    publishedAt: iso(row.published_at),
   };
 }
 
@@ -235,7 +238,7 @@ export async function createPostgresRevision(id: string, changeRequest: string):
   const nextVersion = article.currentVersion + 1;
   await insertVersion(id, buildArticleVersion(topic, nextVersion, changeRequest));
   await database().query(
-    `UPDATE articles SET current_version = $2, status = 'drafting', approved_at = NULL, updated_at = NOW()
+    `UPDATE articles SET current_version = $2, status = 'drafting', approved_at = NULL, published_at = NULL, updated_at = NOW()
      WHERE id = $1`, [id, nextVersion],
   );
   return getPostgresArticle(id);
@@ -248,4 +251,19 @@ export async function approvePostgresArticle(id: string): Promise<GeneratedArtic
      WHERE id = $1 AND deleted_at IS NULL RETURNING id`, [id],
   );
   return result.rowCount ? getPostgresArticle(id) : null;
+}
+
+export async function publishPostgresArticle(id: string): Promise<GeneratedArticle | null> {
+  await initializeDatabase();
+  const result = await database().query(
+    `UPDATE articles SET status = 'published', published_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND status = 'approved' AND deleted_at IS NULL RETURNING id`, [id],
+  );
+  if (!result.rowCount) return null;
+  await database().query(
+    `INSERT INTO publication_jobs (id, article_id, status, requested_at, completed_at)
+     VALUES ($1, $2, 'completed', NOW(), NOW())`,
+    [randomUUID(), id],
+  );
+  return getPostgresArticle(id);
 }

@@ -3,8 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script' // ✨ 新增：引入 Next.js 內建的 Script 組件
 import './globals.css'
-import Navigation from '@/components/Navigation'
-import Footer from '@/components/Footer'
+import AppChrome from '@/components/AppChrome'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -169,11 +168,7 @@ export default function RootLayout({
           `}
         </Script>
 
-        <Navigation />
-        <main className="flex-grow pt-14 md:pt-20">
-            {children}
-        </main>
-        <Footer />
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   )
