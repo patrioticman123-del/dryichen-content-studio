@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createPool, type VercelPool } from '@vercel/postgres';
-import { buildArticleVersion, slugify } from './repository';
+import { slugify } from './repository';
+import { generateArticleVersion } from './gemini-generator';
 import { seedTopics } from './seed';
 import type {
   ArticleVersion,
@@ -219,7 +220,7 @@ export async function generatePostgresArticle(topicId: string): Promise<Generate
   if (!topic) return null;
   const articleId = randomUUID();
   const timestamp = new Date().toISOString();
-  const articleVersion = buildArticleVersion(topic);
+  const articleVersion = await generateArticleVersion(topic);
   await database().query(
     `INSERT INTO articles (id, topic_id, slug, category, status, current_version, created_at, updated_at)
      VALUES ($1, $2, $3, '衛教文章', 'drafting', 1, $4, $4)`,
@@ -236,7 +237,8 @@ export async function createPostgresRevision(id: string, changeRequest: string):
   const topic = (await loadTopics()).find((item) => item.id === article.topicId);
   if (!topic) return null;
   const nextVersion = article.currentVersion + 1;
-  await insertVersion(id, buildArticleVersion(topic, nextVersion, changeRequest));
+  const previousVersion = article.versions.find((item) => item.version === article.currentVersion);
+  await insertVersion(id, await generateArticleVersion(topic, nextVersion, changeRequest, previousVersion));
   await database().query(
     `UPDATE articles SET current_version = $2, status = 'drafting', approved_at = NULL, published_at = NULL, updated_at = NOW()
      WHERE id = $1`, [id, nextVersion],

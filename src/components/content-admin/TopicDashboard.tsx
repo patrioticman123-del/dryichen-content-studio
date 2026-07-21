@@ -39,11 +39,16 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
   async function generate(id: string) {
     setBusyId(id);
     setError('');
-    const response = await fetch(`/api/admin/topics/${id}/generate`, { method: 'POST' });
-    const result = await response.json();
-    setBusyId(undefined);
-    if (!response.ok) return setError(result.error || '文章生成失敗，請稍後再試。');
-    router.push(`/admin/articles/${result.article.id}/preview`);
+    try {
+      const response = await fetch(`/api/admin/topics/${id}/generate`, { method: 'POST' });
+      const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤，請稍後再試。' }));
+      if (!response.ok) return setError(result.error || '文章生成失敗，請稍後再試。');
+      router.push(`/admin/articles/${result.article.id}/preview`);
+    } catch {
+      setError('網路連線中斷，文章尚未建立，請稍後再試。');
+    } finally {
+      setBusyId(undefined);
+    }
   }
 
   return (

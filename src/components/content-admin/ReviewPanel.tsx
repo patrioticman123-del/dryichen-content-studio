@@ -20,15 +20,20 @@ export default function ReviewPanel({ article, checks }: { article: GeneratedArt
     if (!request.trim()) return;
     setBusy(true);
     setMessage('');
-    const response = await fetch(`/api/admin/articles/${article.id}/versions`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changeRequest: request }),
-    });
-    const result = await response.json();
-    setBusy(false);
-    if (!response.ok) return setMessage(result.error || '建立新版本失敗。');
-    setRequest('');
-    setMessage(`已建立第 ${result.article.currentVersion} 版。`);
-    router.refresh();
+    try {
+      const response = await fetch(`/api/admin/articles/${article.id}/versions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changeRequest: request }),
+      });
+      const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤，請稍後再試。' }));
+      if (!response.ok) return setMessage(result.error || '建立新版本失敗。');
+      setRequest('');
+      setMessage(`已建立第 ${result.article.currentVersion} 版。`);
+      router.refresh();
+    } catch {
+      setMessage('網路連線中斷，新版本尚未建立，請稍後再試。');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function approve() {
