@@ -36,21 +36,6 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
     setTopics((current) => current.map((topic) => topic.id === id ? result.topic : topic));
   }
 
-  async function generate(id: string) {
-    setBusyId(id);
-    setError('');
-    try {
-      const response = await fetch(`/api/admin/topics/${id}/generate`, { method: 'POST' });
-      const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤，請稍後再試。' }));
-      if (!response.ok) return setError(result.error || '文章生成失敗，請稍後再試。');
-      router.push(`/admin/articles/${result.article.id}/preview`);
-    } catch {
-      setError('網路連線中斷，文章尚未建立，請稍後再試。');
-    } finally {
-      setBusyId(undefined);
-    }
-  }
-
   return (
     <div>
       <nav className="mb-5 grid grid-cols-2 gap-2 sm:flex" aria-label="議題篩選">
@@ -98,12 +83,12 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
                 忽略
               </button>
               <button
-                disabled={busyId === topic.id}
-                onClick={() => topic.articleId ? router.push(`/admin/articles/${topic.articleId}/preview`) : generate(topic.id)}
+                onClick={() => router.push(`/admin/content-topics/${topic.id}/prompt`)}
                 className="col-span-2 min-h-12 rounded-xl bg-teal-600 px-4 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
               >
-                {busyId === topic.id ? '處理中…' : topic.articleId ? '開啟文章預覽' : '生成文章'}
+                產生文章提示詞
               </button>
+              {topic.articleId && <button onClick={() => router.push(`/admin/articles/${topic.articleId}/preview`)} className="col-span-2 min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">開啟既有文章預覽</button>}
             </div>
           </article>
         ))}

@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { createPool, type VercelPool } from '@vercel/postgres';
-import { slugify } from './repository';
-import { generateArticleVersion } from './gemini-generator';
 import { seedTopics } from './seed';
 import type {
   ArticleVersion,
@@ -196,54 +194,6 @@ export async function getPostgresArticle(id: string): Promise<GeneratedArticle |
     db.query<VersionRow>(`SELECT * FROM article_versions WHERE article_id = $1 ORDER BY version`, [id]),
   ]);
   return articleResult.rows[0] ? mapArticle(articleResult.rows[0], versionResult.rows) : null;
-}
-
-async function insertVersion(articleId: string, version: ArticleVersion): Promise<void> {
-  await database().query(
-    `INSERT INTO article_versions
-      (id, article_id, version, title, summary, seo, keywords, content_html, references_json, change_request, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9::jsonb, $10, $11)`,
-    [randomUUID(), articleId, version.version, version.title, version.summary,
-      JSON.stringify({ title: version.seoTitle, description: version.seoDescription }),
-      JSON.stringify(version.keywords), version.contentHtml, JSON.stringify(version.references),
-      version.changeRequest || null, version.createdAt],
-  );
-}
-
-export async function generatePostgresArticle(topicId: string): Promise<GeneratedArticle | null> {
-  await initializeDatabase();
-  const existing = await database().query<ArticleRow>(
-    `SELECT * FROM articles WHERE topic_id = $1 AND deleted_at IS NULL`, [topicId],
-  );
-  if (existing.rows[0]) return getPostgresArticle(existing.rows[0].id);
-  const topic = (await loadTopics()).find((item) => item.id === topicId);
-  if (!topic) return null;
-  const articleId = randomUUID();
-  const timestamp = new Date().toISOString();
-  const articleVersion = await generateArticleVersion(topic);
-  await database().query(
-    `INSERT INTO articles (id, topic_id, slug, category, status, current_version, created_at, updated_at)
-     VALUES ($1, $2, $3, '衛教文章', 'drafting', 1, $4, $4)`,
-    [articleId, topicId, slugify(topic), timestamp],
-  );
-  await insertVersion(articleId, articleVersion);
-  await database().query(`UPDATE topics SET status = 'drafting', updated_at = NOW() WHERE id = $1`, [topicId]);
-  return getPostgresArticle(articleId);
-}
-
-export async function createPostgresRevision(id: string, changeRequest: string): Promise<GeneratedArticle | null> {
-  const article = await getPostgresArticle(id);
-  if (!article) return null;
-  const topic = (await loadTopics()).find((item) => item.id === article.topicId);
-  if (!topic) return null;
-  const nextVersion = article.currentVersion + 1;
-  const previousVersion = article.versions.find((item) => item.version === article.currentVersion);
-  await insertVersion(id, await generateArticleVersion(topic, nextVersion, changeRequest, previousVersion));
-  await database().query(
-    `UPDATE articles SET current_version = $2, status = 'drafting', approved_at = NULL, published_at = NULL, updated_at = NOW()
-     WHERE id = $1`, [id, nextVersion],
-  );
-  return getPostgresArticle(id);
 }
 
 export async function approvePostgresArticle(id: string): Promise<GeneratedArticle | null> {
