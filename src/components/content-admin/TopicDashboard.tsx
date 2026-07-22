@@ -8,7 +8,7 @@ const filters = [
   ['active', '待處理'],
   ['saved', '已收藏'],
   ['drafting', '已有草稿'],
-  ['dismissed', '已忽略'],
+  ['dismissed', '過去議題'],
 ] as const;
 
 export default function TopicDashboard({ initialTopics, initialNotice = '' }: { initialTopics: ContentTopic[]; initialNotice?: string }) {
@@ -37,6 +37,31 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
     setBusyId(undefined);
     if (!response.ok) return setError(result.error || '更新失敗，請稍後再試。');
     setTopics((current) => current.map((topic) => topic.id === id ? result.topic : topic));
+  }
+
+  async function openPrompt(topic: ContentTopic) {
+    if (!['drafting', 'generating'].includes(topic.status)) {
+      setBusyId(topic.id);
+      setError('');
+      try {
+        const response = await fetch(`/api/admin/topics/${topic.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'drafting' }),
+        });
+        const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤。' }));
+        if (!response.ok) {
+          setBusyId(undefined);
+          setError(result.error || '無法記錄題目使用狀態，請稍後再試。');
+          return;
+        }
+      } catch {
+        setBusyId(undefined);
+        setError('網路連線中斷，請稍後再試。');
+        return;
+      }
+    }
+    router.push(`/admin/content-topics/${topic.id}/prompt`);
   }
 
   async function refreshTopics() {
@@ -72,7 +97,7 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
       if (!response.ok) return setError(result.error || '強制更新失敗，請稍後再試。');
       setTopics(result.topics);
       setFilter('active');
-      setNotice(`已排除原本的今日題目，重新交叉搜尋並提供 ${result.generatedCount || 3} 個不同議題。明天仍會照正常排程更新。`);
+      setNotice(`原本未收藏的今日題目已移到「過去議題」，並重新提供 ${result.generatedCount || 3} 個不同議題。明天仍會照正常排程更新。`);
     } catch {
       setError('網路連線中斷，原本的題目仍然保留，請稍後再試。');
     } finally {
@@ -114,6 +139,12 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
           </button>
         ))}
       </nav>
+
+      {filter === 'dismissed' && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-500">
+          今天未使用、手動移入或強制換掉的題目會保留在這裡，30 天後自動清除。收藏與已有草稿的題目不會被清除。
+        </div>
+      )}
 
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
 
@@ -157,19 +188,22 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
               <button
                 disabled={busyId === topic.id}
                 onClick={() => updateStatus(topic.id, 'saved')}
-                className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className={`${topic.status === 'dismissed' ? 'col-span-2' : ''} min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50`}
               >
                 收藏
               </button>
+              {topic.status !== 'dismissed' && (
+                <button
+                  disabled={busyId === topic.id}
+                  onClick={() => updateStatus(topic.id, 'dismissed')}
+                  className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  移到過去議題
+                </button>
+              )}
               <button
                 disabled={busyId === topic.id}
-                onClick={() => updateStatus(topic.id, 'dismissed')}
-                className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-50"
-              >
-                忽略
-              </button>
-              <button
-                onClick={() => router.push(`/admin/content-topics/${topic.id}/prompt`)}
+                onClick={() => openPrompt(topic)}
                 className="col-span-2 min-h-12 rounded-xl bg-teal-600 px-4 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
               >
                 產生文章提示詞

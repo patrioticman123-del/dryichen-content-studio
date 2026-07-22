@@ -6,6 +6,13 @@ import type { ContentAdminStore, ContentTopic, DailyTopicRefreshOptions, DailyTo
 
 const dataDirectory = path.join(process.cwd(), '.local-data');
 const dataFile = path.join(dataDirectory, 'content-admin.json');
+const protectedTopicStatuses: TopicStatus[] = ['saved', 'drafting', 'generating'];
+
+function retentionCutoff(runDate = taipeiDate()): string {
+  const cutoff = new Date(`${runDate}T00:00:00.000Z`);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  return cutoff.toISOString().slice(0, 10);
+}
 
 async function readStore(): Promise<ContentAdminStore> {
   try {
@@ -29,11 +36,25 @@ export async function listTopics(): Promise<ContentTopic[]> {
   if (process.env.CONTENT_ADMIN_STORAGE === 'postgres') {
     return (await import('./postgres-repository')).listPostgresTopics();
   }
-  const topics = (await readStore()).topics;
+  const store = await readStore();
+  const cutoff = retentionCutoff();
+  const retainedTopics = store.topics.filter((topic) =>
+    topic.status !== 'dismissed' || (topic.runDate || topic.discoveredAt.slice(0, 10)) >= cutoff,
+  );
+  if (retainedTopics.length !== store.topics.length) {
+    store.topics = retainedTopics;
+    await writeStore(store);
+  }
+  const topics = store.topics;
   const newestDate = topics.map((topic) => topic.runDate || topic.discoveredAt.slice(0, 10)).sort().at(-1);
   return topics.filter((topic) =>
-    (topic.runDate || topic.discoveredAt.slice(0, 10)) === newestDate || ['saved', 'drafting', 'generating'].includes(topic.status),
-  ).sort((a, b) => b.score.total - a.score.total);
+    (topic.runDate || topic.discoveredAt.slice(0, 10)) === newestDate
+      || protectedTopicStatuses.includes(topic.status)
+      || topic.status === 'dismissed',
+  ).sort((a, b) => {
+    const dateDifference = (b.runDate || b.discoveredAt.slice(0, 10)).localeCompare(a.runDate || a.discoveredAt.slice(0, 10));
+    return dateDifference || b.score.total - a.score.total;
+  });
 }
 
 export async function refreshDailyTopics(options: DailyTopicRefreshOptions = {}): Promise<DailyTopicRefreshResult> {
@@ -42,8 +63,22 @@ export async function refreshDailyTopics(options: DailyTopicRefreshOptions = {})
   }
   const store = await readStore();
   const runDate = taipeiDate();
+  const cutoff = retentionCutoff(runDate);
+  store.topics = store.topics.filter((topic) =>
+    topic.status !== 'dismissed' || (topic.runDate || topic.discoveredAt.slice(0, 10)) >= cutoff,
+  );
+  for (const topic of store.topics) {
+    const topicDate = topic.runDate || topic.discoveredAt.slice(0, 10);
+    if (topicDate < runDate && topic.status === 'new') {
+      topic.status = 'dismissed';
+      topic.updatedAt = new Date().toISOString();
+    }
+  }
   const existing = store.topics.filter((topic) => topic.runDate === runDate);
-  if (existing.length && !options.force) return { runDate, created: false, topics: existing.sort((a, b) => b.score.total - a.score.total) };
+  if (existing.length && !options.force) {
+    await writeStore(store);
+    return { runDate, created: false, topics: existing.sort((a, b) => b.score.total - a.score.total) };
+  }
   const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const recent = store.topics.filter((topic) => topic.discoveredAt >= recentCutoff);
   const topics = await discoverDailyTopics({
@@ -54,7 +89,14 @@ export async function refreshDailyTopics(options: DailyTopicRefreshOptions = {})
     count: options.count,
     variationSeed: options.variationSeed,
   });
-  if (options.force) store.topics = store.topics.filter((topic) => topic.runDate !== runDate || ['saved', 'drafting', 'generating'].includes(topic.status));
+  if (options.force) {
+    for (const topic of existing) {
+      if (!protectedTopicStatuses.includes(topic.status)) {
+        topic.status = 'dismissed';
+        topic.updatedAt = new Date().toISOString();
+      }
+    }
+  }
   store.topics.push(...topics.filter((topic) => !store.topics.some((existingTopic) => existingTopic.id === topic.id)));
   await writeStore(store);
   return { runDate, created: true, topics };

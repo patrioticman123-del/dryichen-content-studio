@@ -129,6 +129,18 @@ function dateOnly(value: Date | string): string {
 async function loadTopics(runId?: string): Promise<ContentTopic[]> {
   await initializeDatabase();
   const db = database();
+  await db.query(
+    `UPDATE topics t SET status = 'dismissed', updated_at = NOW()
+     FROM topic_runs r
+     WHERE t.run_id = r.id AND t.deleted_at IS NULL AND t.status = 'new'
+       AND r.run_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date`,
+  );
+  await db.query(
+    `UPDATE topics t SET deleted_at = NOW(), updated_at = NOW()
+     FROM topic_runs r
+     WHERE t.run_id = r.id AND t.deleted_at IS NULL AND t.status = 'dismissed'
+       AND r.run_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date - INTERVAL '30 days'`,
+  );
   const topicQuery = runId
     ? `SELECT t.*, r.run_date, a.id AS article_id FROM topics t
        JOIN topic_runs r ON r.id = t.run_id
@@ -141,6 +153,8 @@ async function loadTopics(runId?: string): Promise<ContentTopic[]> {
        WHERE t.deleted_at IS NULL AND (
          t.run_id = (SELECT id FROM topic_runs WHERE status = 'completed' ORDER BY run_date DESC, completed_at DESC LIMIT 1)
          OR t.status IN ('saved', 'drafting', 'generating')
+         OR (t.status = 'dismissed'
+           AND r.run_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date - INTERVAL '30 days')
        )
        ORDER BY r.run_date DESC, (t.score->>'total')::int DESC`;
   const [topicResult, keywordResult, sourceResult] = await Promise.all([
@@ -219,7 +233,7 @@ export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptio
 
     if (options.force) {
       await db.query(
-        `UPDATE topics SET deleted_at = NOW(), updated_at = NOW()
+        `UPDATE topics SET status = 'dismissed', updated_at = NOW()
          WHERE run_id = $1 AND status NOT IN ('saved', 'drafting', 'generating')`, [runId],
       );
     }
@@ -230,7 +244,7 @@ export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptio
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category,
            summary = EXCLUDED.summary, rationale = EXCLUDED.rationale, score = EXCLUDED.score,
-           updated_at = EXCLUDED.updated_at, deleted_at = NULL`,
+           status = EXCLUDED.status, updated_at = EXCLUDED.updated_at, deleted_at = NULL`,
         [topic.id, runId, topic.title, topic.category, topic.summary, topic.rationale,
           JSON.stringify(topic.score), topic.status, topic.discoveredAt],
       );
