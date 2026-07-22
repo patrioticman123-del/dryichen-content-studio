@@ -190,7 +190,12 @@ export async function discoverDailyTopics(input: {
     const timeliness = Math.min(98, 58 + newsMatches.length * 8 + literatureMatches.length * 5 + (recentNews ? 7 : 0) + (suggestions.length ? 5 : 0));
     const searchIntent = Math.min(98, 72 + Math.min(suggestions.length, 5) * 4 + (newsMatches.length ? 4 : 0));
     const differentiation = Math.min(95, 72 + evidenceTypes * 7 + (recentIds.some((id) => id.endsWith(`-${profile.key}`)) ? -18 : 5));
-    const title = chooseTitle(profile, input.runDate, recentTitles);
+    const evidenceText = [...suggestions, ...newsMatches.map((item) => item.title), ...literatureMatches.map((item) => item.title)].join(' ');
+    let title = chooseTitle(profile, input.runDate, recentTitles);
+    if (profile.key === 'child-growth') {
+      if (/性早熟/.test(evidenceText)) title = profile.titles[2];
+      else if (/骨齡|長不高|身高停滯|長高變慢|生長遲緩/.test(evidenceText)) title = profile.titles[0];
+    }
     const sources: TopicSourceSignal[] = [];
 
     if (suggestions.length) {
