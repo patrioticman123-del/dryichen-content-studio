@@ -57,6 +57,7 @@ async function initializeDatabase(): Promise<void> {
     )`);
     await db.query(`ALTER TABLE topic_runs ADD COLUMN IF NOT EXISTS error_message TEXT`);
     await db.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`);
+    await db.query(`ALTER TABLE topics ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`);
     await db.query(`CREATE TABLE IF NOT EXISTS article_versions (
       id TEXT PRIMARY KEY, article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
       version INTEGER NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, seo JSONB NOT NULL,
@@ -130,16 +131,25 @@ async function loadTopics(runId?: string): Promise<ContentTopic[]> {
   await initializeDatabase();
   const db = database();
   await db.query(
-    `UPDATE topics t SET status = 'dismissed', updated_at = NOW()
+    `UPDATE topics
+     SET status = 'dismissed', archived_at = COALESCE(archived_at, deleted_at), deleted_at = NULL, updated_at = NOW()
+     WHERE deleted_at IS NOT NULL AND status NOT IN ('saved', 'drafting', 'generating')
+       AND COALESCE(archived_at, deleted_at) >= NOW() - INTERVAL '30 days'`,
+  );
+  await db.query(
+    `UPDATE topics SET archived_at = COALESCE(archived_at, updated_at, created_at)
+     WHERE deleted_at IS NULL AND status = 'dismissed' AND archived_at IS NULL`,
+  );
+  await db.query(
+    `UPDATE topics t SET status = 'dismissed', archived_at = NOW(), updated_at = NOW()
      FROM topic_runs r
      WHERE t.run_id = r.id AND t.deleted_at IS NULL AND t.status = 'new'
        AND r.run_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date`,
   );
   await db.query(
-    `UPDATE topics t SET deleted_at = NOW(), updated_at = NOW()
-     FROM topic_runs r
-     WHERE t.run_id = r.id AND t.deleted_at IS NULL AND t.status = 'dismissed'
-       AND r.run_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date - INTERVAL '30 days'`,
+    `UPDATE topics SET deleted_at = NOW(), updated_at = NOW()
+     WHERE deleted_at IS NULL AND status = 'dismissed'
+       AND archived_at < NOW() - INTERVAL '30 days'`,
   );
   const topicQuery = runId
     ? `SELECT t.*, r.run_date, a.id AS article_id FROM topics t
@@ -153,8 +163,7 @@ async function loadTopics(runId?: string): Promise<ContentTopic[]> {
        WHERE t.deleted_at IS NULL AND (
          t.run_id = (SELECT id FROM topic_runs WHERE status = 'completed' ORDER BY run_date DESC, completed_at DESC LIMIT 1)
          OR t.status IN ('saved', 'drafting', 'generating')
-         OR (t.status = 'dismissed'
-           AND r.run_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Taipei')::date - INTERVAL '30 days')
+         OR (t.status = 'dismissed' AND t.archived_at >= NOW() - INTERVAL '30 days')
        )
        ORDER BY r.run_date DESC, (t.score->>'total')::int DESC`;
   const [topicResult, keywordResult, sourceResult] = await Promise.all([
@@ -233,7 +242,7 @@ export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptio
 
     if (options.force) {
       await db.query(
-        `UPDATE topics SET status = 'dismissed', updated_at = NOW()
+        `UPDATE topics SET status = 'dismissed', archived_at = NOW(), deleted_at = NULL, updated_at = NOW()
          WHERE run_id = $1 AND status NOT IN ('saved', 'drafting', 'generating')`, [runId],
       );
     }
@@ -244,7 +253,7 @@ export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptio
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category,
            summary = EXCLUDED.summary, rationale = EXCLUDED.rationale, score = EXCLUDED.score,
-           status = EXCLUDED.status, updated_at = EXCLUDED.updated_at, deleted_at = NULL`,
+           status = EXCLUDED.status, archived_at = NULL, updated_at = EXCLUDED.updated_at, deleted_at = NULL`,
         [topic.id, runId, topic.title, topic.category, topic.summary, topic.rationale,
           JSON.stringify(topic.score), topic.status, topic.discoveredAt],
       );
@@ -283,7 +292,10 @@ export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptio
 export async function updatePostgresTopicStatus(id: string, status: TopicStatus): Promise<ContentTopic | null> {
   await initializeDatabase();
   const result = await database().query(
-    `UPDATE topics SET status = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
+    `UPDATE topics SET status = $2,
+       archived_at = CASE WHEN $2 = 'dismissed' THEN NOW() ELSE NULL END,
+       updated_at = NOW()
+     WHERE id = $1 AND deleted_at IS NULL RETURNING id`,
     [id, status],
   );
   if (!result.rowCount) return null;

@@ -39,7 +39,7 @@ export async function listTopics(): Promise<ContentTopic[]> {
   const store = await readStore();
   const cutoff = retentionCutoff();
   const retainedTopics = store.topics.filter((topic) =>
-    topic.status !== 'dismissed' || (topic.runDate || topic.discoveredAt.slice(0, 10)) >= cutoff,
+    topic.status !== 'dismissed' || topic.updatedAt.slice(0, 10) >= cutoff,
   );
   if (retainedTopics.length !== store.topics.length) {
     store.topics = retainedTopics;
@@ -65,7 +65,7 @@ export async function refreshDailyTopics(options: DailyTopicRefreshOptions = {})
   const runDate = taipeiDate();
   const cutoff = retentionCutoff(runDate);
   store.topics = store.topics.filter((topic) =>
-    topic.status !== 'dismissed' || (topic.runDate || topic.discoveredAt.slice(0, 10)) >= cutoff,
+    topic.status !== 'dismissed' || topic.updatedAt.slice(0, 10) >= cutoff,
   );
   for (const topic of store.topics) {
     const topicDate = topic.runDate || topic.discoveredAt.slice(0, 10);
