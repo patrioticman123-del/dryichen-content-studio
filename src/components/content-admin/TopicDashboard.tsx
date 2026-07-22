@@ -11,12 +11,14 @@ const filters = [
   ['dismissed', '已忽略'],
 ] as const;
 
-export default function TopicDashboard({ initialTopics }: { initialTopics: ContentTopic[] }) {
+export default function TopicDashboard({ initialTopics, initialNotice = '' }: { initialTopics: ContentTopic[]; initialNotice?: string }) {
   const router = useRouter();
   const [topics, setTopics] = useState(initialTopics);
   const [busyId, setBusyId] = useState<string>();
+  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'active' | TopicStatus>('active');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(initialNotice);
 
   const visibleTopics = topics.filter((topic) =>
     filter === 'active' ? topic.status !== 'dismissed' : topic.status === filter,
@@ -36,8 +38,44 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
     setTopics((current) => current.map((topic) => topic.id === id ? result.topic : topic));
   }
 
+  async function refreshTopics() {
+    setRefreshing(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch('/api/admin/topics/refresh', { method: 'POST' });
+      const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤。' }));
+      if (!response.ok) return setError(result.error || '搜尋失敗，請稍後再試。');
+      setTopics(result.topics);
+      setFilter('active');
+      setNotice(result.pending
+        ? `${result.runDate} 的議題正在背景搜尋，請稍後再按一次檢查。`
+        : result.created
+        ? `已完成 ${result.runDate} 的最新搜尋，共找到 ${result.topics.filter((topic: ContentTopic) => topic.runDate === result.runDate).length} 個今日題目。`
+        : `${result.runDate} 的議題已經搜尋完成，不會重複消耗流量。`);
+    } catch {
+      setError('網路連線中斷，舊議題仍然保留，請稍後再試。');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <div>
+      <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-black text-slate-900">每日熱門議題搜尋</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">台灣時間凌晨 00:00 排程；Vercel 免費版可能在 00:00–00:59 之間執行。早上首次開啟也會自動補跑。</p>
+          </div>
+          <button type="button" onClick={refreshTopics} disabled={refreshing} className="min-h-11 shrink-0 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50">
+            {refreshing ? '正在交叉搜尋…' : '檢查今日議題'}
+          </button>
+        </div>
+      </section>
+
+      {notice && <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-800">{notice}</div>}
+
       <nav className="mb-5 grid grid-cols-2 gap-2 sm:flex" aria-label="議題篩選">
         {filters.map(([value, label]) => (
           <button
@@ -61,13 +99,36 @@ export default function TopicDashboard({ initialTopics }: { initialTopics: Conte
               <div className="min-w-0 flex-1">
                 <span className="text-xs font-bold text-teal-600">{topic.category}</span>
                 <h2 className="mt-1 text-lg font-black leading-7 text-slate-900">{topic.title}</h2>
+                <p className="mt-1 text-xs text-slate-400">議題日期：{topic.runDate || topic.discoveredAt.slice(0, 10)}</p>
               </div>
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-lg font-black text-teal-700" aria-label={`議題分數 ${topic.score.total}`}>
                 {topic.score.total}
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <p className="mt-4 text-sm leading-6 text-slate-600">{topic.summary}</p>
+
+            <div className="mt-4 rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-black text-slate-700">近期搜尋問句／長尾關鍵字</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topic.longTailKeywords.map((keyword) => <span key={keyword} className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs leading-5 text-teal-700">{keyword}</span>)}
+              </div>
+            </div>
+
+            <details className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+              <summary className="cursor-pointer text-xs font-black text-slate-700">查看入選原因與查證來源（{topic.sources.length}）</summary>
+              <p className="mt-3 text-xs leading-5 text-slate-500">{topic.rationale}</p>
+              <ul className="mt-3 space-y-2">
+                {topic.sources.map((source, index) => (
+                  <li key={`${source.label}-${index}`} className="rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                    {source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-bold text-teal-700 underline decoration-teal-200 underline-offset-2">{source.label}</a> : <span className="font-bold text-slate-700">{source.label}</span>}
+                    <p className="mt-1">{source.note}</p>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
               <button
                 disabled={busyId === topic.id}
                 onClick={() => updateStatus(topic.id, 'saved')}

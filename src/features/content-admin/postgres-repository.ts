@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { createPool, type VercelPool } from '@vercel/postgres';
 import { seedTopics } from './seed';
+import { discoverDailyTopics, taipeiDate } from './topic-discovery';
 import type {
   ArticleVersion,
   ContentTopic,
+  DailyTopicRefreshResult,
   GeneratedArticle,
   TopicSourceSignal,
   TopicStatus,
@@ -52,6 +54,7 @@ async function initializeDatabase(): Promise<void> {
       approved_at TIMESTAMPTZ, deleted_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
+    await db.query(`ALTER TABLE topic_runs ADD COLUMN IF NOT EXISTS error_message TEXT`);
     await db.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`);
     await db.query(`CREATE TABLE IF NOT EXISTS article_versions (
       id TEXT PRIMARY KEY, article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
@@ -109,7 +112,7 @@ async function initializeDatabase(): Promise<void> {
 type TopicRow = {
   id: string; title: string; category: string; summary: string; rationale: string;
   score: ContentTopic['score']; status: TopicStatus; created_at: Date | string;
-  updated_at: Date | string; article_id: string | null;
+  updated_at: Date | string; article_id: string | null; run_date: Date | string;
 };
 
 function iso(value: Date | string | null | undefined): string | undefined {
@@ -117,13 +120,30 @@ function iso(value: Date | string | null | undefined): string | undefined {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-async function loadTopics(): Promise<ContentTopic[]> {
+function dateOnly(value: Date | string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return (value instanceof Date ? value : new Date(value)).toISOString().slice(0, 10);
+}
+
+async function loadTopics(runId?: string): Promise<ContentTopic[]> {
   await initializeDatabase();
   const db = database();
+  const topicQuery = runId
+    ? `SELECT t.*, r.run_date, a.id AS article_id FROM topics t
+       JOIN topic_runs r ON r.id = t.run_id
+       LEFT JOIN articles a ON a.topic_id = t.id AND a.deleted_at IS NULL
+       WHERE t.deleted_at IS NULL AND t.run_id = $1
+       ORDER BY (t.score->>'total')::int DESC`
+    : `SELECT t.*, r.run_date, a.id AS article_id FROM topics t
+       JOIN topic_runs r ON r.id = t.run_id
+       LEFT JOIN articles a ON a.topic_id = t.id AND a.deleted_at IS NULL
+       WHERE t.deleted_at IS NULL AND (
+         t.run_id = (SELECT id FROM topic_runs WHERE status = 'completed' ORDER BY run_date DESC, completed_at DESC LIMIT 1)
+         OR t.status IN ('saved', 'drafting', 'generating')
+       )
+       ORDER BY r.run_date DESC, (t.score->>'total')::int DESC`;
   const [topicResult, keywordResult, sourceResult] = await Promise.all([
-    db.query<TopicRow>(`SELECT t.*, a.id AS article_id FROM topics t
-      LEFT JOIN articles a ON a.topic_id = t.id AND a.deleted_at IS NULL
-      WHERE t.deleted_at IS NULL ORDER BY (t.score->>'total')::int DESC`),
+    db.query<TopicRow>(topicQuery, runId ? [runId] : []),
     db.query<{ topic_id: string; keyword: string }>(
       `SELECT topic_id, keyword FROM topic_keywords ORDER BY topic_id, position`,
     ),
@@ -134,6 +154,7 @@ async function loadTopics(): Promise<ContentTopic[]> {
   return topicResult.rows.map((row) => ({
     id: row.id, title: row.title, category: row.category, summary: row.summary,
     rationale: row.rationale, score: row.score, status: row.status,
+    runDate: dateOnly(row.run_date),
     discoveredAt: iso(row.created_at)!, updatedAt: iso(row.updated_at)!,
     articleId: row.article_id || undefined,
     longTailKeywords: keywordResult.rows.filter((item) => item.topic_id === row.id).map((item) => item.keyword),
@@ -145,6 +166,90 @@ async function loadTopics(): Promise<ContentTopic[]> {
 
 export async function listPostgresTopics(): Promise<ContentTopic[]> {
   return loadTopics();
+}
+
+export async function refreshPostgresDailyTopics(): Promise<DailyTopicRefreshResult> {
+  await initializeDatabase();
+  const db = database();
+  const runDate = taipeiDate();
+  const runId = `topic-run-${runDate}`;
+  const inserted = await db.query<{ id: string }>(
+    `INSERT INTO topic_runs (id, run_date, timezone, status, started_at)
+     VALUES ($1, $2, 'Asia/Taipei', 'running', NOW())
+     ON CONFLICT (run_date, timezone) DO NOTHING RETURNING id`,
+    [runId, runDate],
+  );
+
+  if (!inserted.rowCount) {
+    const existing = await db.query<{ id: string; status: string }>(
+      `SELECT id, status FROM topic_runs WHERE run_date = $1 AND timezone = 'Asia/Taipei'`, [runDate],
+    );
+    const row = existing.rows[0];
+    if (row?.status === 'completed') {
+      return { runDate, created: false, topics: await loadTopics(row.id) };
+    }
+    const reclaimed = await db.query<{ id: string }>(
+      `UPDATE topic_runs SET status = 'running', started_at = NOW(), completed_at = NULL, error_message = NULL
+       WHERE id = $1 AND (status = 'failed' OR started_at < NOW() - INTERVAL '20 minutes') RETURNING id`,
+      [row?.id || runId],
+    );
+    if (!reclaimed.rowCount) return { runDate, created: false, pending: true, topics: [] };
+  }
+
+  try {
+    const [recentResult, titleResult] = await Promise.all([
+      db.query<{ id: string }>(
+        `SELECT t.id FROM topics t JOIN topic_runs r ON r.id = t.run_id
+         WHERE r.run_date >= $1::date - INTERVAL '3 days' AND r.run_date < $1::date`, [runDate],
+      ),
+      db.query<{ title: string }>(
+        `SELECT title FROM topics WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 200`,
+      ),
+    ]);
+    const topics = await discoverDailyTopics({
+      runDate,
+      recentTopicIds: recentResult.rows.map((row) => row.id),
+      recentTitles: titleResult.rows.map((row) => row.title),
+    });
+
+    for (const topic of topics) {
+      await db.query(
+        `INSERT INTO topics (id, run_id, title, category, summary, rationale, score, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
+         ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category,
+           summary = EXCLUDED.summary, rationale = EXCLUDED.rationale, score = EXCLUDED.score,
+           updated_at = EXCLUDED.updated_at`,
+        [topic.id, runId, topic.title, topic.category, topic.summary, topic.rationale,
+          JSON.stringify(topic.score), topic.status, topic.discoveredAt],
+      );
+      for (const [position, keyword] of topic.longTailKeywords.entries()) {
+        await db.query(
+          `INSERT INTO topic_keywords (id, topic_id, keyword, position) VALUES ($1, $2, $3, $4)
+           ON CONFLICT (topic_id, position) DO UPDATE SET keyword = EXCLUDED.keyword`,
+          [`${topic.id}-keyword-${position + 1}`, topic.id, keyword, position],
+        );
+      }
+      for (const [position, source] of topic.sources.entries()) {
+        await db.query(
+          `INSERT INTO topic_sources (id, topic_id, source_type, label, url, note, observed_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           ON CONFLICT (id) DO UPDATE SET source_type = EXCLUDED.source_type, label = EXCLUDED.label,
+             url = EXCLUDED.url, note = EXCLUDED.note, observed_at = NOW()`,
+          [`${topic.id}-source-${position + 1}`, topic.id, source.sourceType, source.label,
+            source.url || null, source.note],
+        );
+      }
+    }
+    await db.query(
+      `UPDATE topic_runs SET status = 'completed', completed_at = NOW(), error_message = NULL WHERE id = $1`,
+      [runId],
+    );
+    return { runDate, created: true, topics };
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 1000) : 'Unknown topic discovery error';
+    await db.query(`UPDATE topic_runs SET status = 'failed', completed_at = NOW(), error_message = $2 WHERE id = $1`, [runId, message]);
+    throw error;
+  }
 }
 
 export async function updatePostgresTopicStatus(id: string, status: TopicStatus): Promise<ContentTopic | null> {

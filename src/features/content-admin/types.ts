@@ -12,7 +12,7 @@ export interface TopicScore {
 
 export interface TopicSourceSignal {
   label: string;
-  sourceType: 'official' | 'search-trend' | 'medical-literature' | 'clinic-observation';
+  sourceType: 'official' | 'search-trend' | 'news' | 'medical-literature' | 'clinic-observation';
   note: string;
   url?: string;
 }
@@ -27,6 +27,7 @@ export interface ContentTopic {
   score: TopicScore;
   sources: TopicSourceSignal[];
   status: TopicStatus;
+  runDate?: string;
   discoveredAt: string;
   updatedAt: string;
   articleId?: string;
@@ -68,6 +69,13 @@ export interface GeneratedArticle {
 export interface ContentAdminStore {
   topics: ContentTopic[];
   articles: GeneratedArticle[];
+}
+
+export interface DailyTopicRefreshResult {
+  runDate: string;
+  created: boolean;
+  pending?: boolean;
+  topics: ContentTopic[];
 }
 
 export interface ApprovalCheck {

@@ -16,7 +16,7 @@ export const seedTopics: ContentTopic[] = [
       { label: '診間常見問題', sourceType: 'clinic-observation', note: '患者經常詢問注射後活動限制與回場時程。' },
       { label: 'PubMed', sourceType: 'medical-literature', note: '正式撰稿時需檢索近五年系統性回顧。', url: 'https://pubmed.ncbi.nlm.nih.gov/' },
     ],
-    status: 'new', discoveredAt: now, updatedAt: now,
+    status: 'new', runDate: '2026-07-20', discoveredAt: now, updatedAt: now,
   },
   {
     id: 'topic-frozen-shoulder-night-pain',
@@ -30,7 +30,7 @@ export const seedTopics: ContentTopic[] = [
       { label: '診間常見問題', sourceType: 'clinic-observation', note: '夜痛與睡姿是肩部患者的高頻問題。' },
       { label: 'WHO 健康資訊', sourceType: 'official', note: '正式撰稿時交叉核對一般健康資訊。', url: 'https://www.who.int/health-topics/' },
     ],
-    status: 'new', discoveredAt: now, updatedAt: now,
+    status: 'new', runDate: '2026-07-20', discoveredAt: now, updatedAt: now,
   },
   {
     id: 'topic-child-growth-exercise',
@@ -44,7 +44,7 @@ export const seedTopics: ContentTopic[] = [
       { label: '診間常見問題', sourceType: 'clinic-observation', note: '家長常把單一運動與長高效果直接連結。' },
       { label: 'PubMed', sourceType: 'medical-literature', note: '正式撰稿時檢索兒童活動與生長研究。', url: 'https://pubmed.ncbi.nlm.nih.gov/' },
     ],
-    status: 'new', discoveredAt: now, updatedAt: now,
+    status: 'new', runDate: '2026-07-20', discoveredAt: now, updatedAt: now,
   },
 ];
 

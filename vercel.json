@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/line-reminder",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/content-topics",
+      "schedule": "0 16 * * *"
     }
   ]
 }
