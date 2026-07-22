@@ -40,7 +40,7 @@ const TOPIC_PROFILES: TopicProfile[] = [
   { key: 'hip-pain', category: '髖部疼痛', probe: '髖關節痛 走路 痛', terms: ['髖關節痛', '髖部疼痛', 'hip pain', 'greater trochanter'], titles: ['走路時髖關節痛，是退化還是肌腱發炎？', '側睡壓到髖部會痛：大轉子疼痛症候群是什麼', '屁股深處痛就是梨狀肌嗎？髖、腰與神經怎麼分'], summary: '用疼痛位置和誘發動作區分髖關節、肌腱、腰椎與神經相關問題。', rationale: '髖部疼痛容易被誤認為腰痛或坐骨神經痛，具差異化衛教價值。', keywords: ['走路髖關節痛', '側睡髖部痛', '屁股深處痛'], patientRelevance: 92, clinicalFit: 96 },
   { key: 'child-growth', category: '兒童成長', probe: '小孩 長不高 骨齡', terms: ['兒童長高', '長不高', '骨齡', '生長板', '生長遲緩'], titles: ['孩子長不高要看骨齡嗎？什麼情況需要評估', '跳繩真的能長高嗎？運動、睡眠與營養怎麼安排', '孩子突然長很快是性早熟嗎？家長要注意哪些變化'], summary: '協助家長理解生長曲線、骨齡、生活習慣與需要進一步評估的警訊。', rationale: '家長搜尋需求穩定，且常以問題句尋找可執行建議與檢查資訊。', keywords: ['小孩長不高骨齡', '跳繩會長高嗎', '兒童生長遲緩'], patientRelevance: 97, clinicalFit: 93 },
   { key: 'scoliosis', category: '兒童與脊椎', probe: '脊椎側彎 小孩 怎麼辦', terms: ['脊椎側彎', 'scoliosis'], titles: ['孩子肩膀一高一低，是脊椎側彎嗎？', '脊椎側彎幾度要治療？觀察、運動與背架怎麼選', '小孩脊椎側彎可以重訓嗎？安全運動原則'], summary: '說明居家觀察、Cobb 角度、追蹤頻率與不同治療階段。', rationale: '家長對外觀變化與治療門檻焦慮高，精準解答能建立可信度。', keywords: ['小孩脊椎側彎怎麼辦', '脊椎側彎幾度要背架', '脊椎側彎可以重訓嗎'], patientRelevance: 94, clinicalFit: 96 },
-  { key: 'weather-pain', category: '生活疼痛', probe: '天氣變化 關節痛', terms: ['天氣痛', '低氣壓', '寒流', '關節痛', 'weather pain'], titles: ['天氣一變關節就痛，真的是低氣壓造成的嗎？', '寒流肩頸腰痠痛：保暖、活動與就醫警訊', '下雨天舊傷會痛有科學根據嗎？'], summary: '從氣壓、溫度與活動量解釋天氣相關疼痛，提供安全應對方法。', rationale: '可隨天氣新聞快速上升，適合結合近期時事但仍維持醫療實用性。', keywords: ['天氣變化關節痛', '低氣壓舊傷痛', '寒流肩頸痠痛'], patientRelevance: 91, clinicalFit: 89 },
+  { key: 'weather-pain', category: '生活疼痛', probe: '天氣變化 關節痛', terms: ['天氣痛', '低氣壓', '寒流', 'weather pain'], titles: ['天氣一變關節就痛，真的是低氣壓造成的嗎？', '寒流肩頸腰痠痛：保暖、活動與就醫警訊', '下雨天舊傷會痛有科學根據嗎？'], summary: '從氣壓、溫度與活動量解釋天氣相關疼痛，提供安全應對方法。', rationale: '可隨天氣新聞快速上升，適合結合近期時事但仍維持醫療實用性。', keywords: ['天氣變化關節痛', '低氣壓舊傷痛', '寒流肩頸痠痛'], patientRelevance: 91, clinicalFit: 89 },
   { key: 'ergonomics', category: '職場復健', probe: '久坐 腰痛 肩頸痛', terms: ['久坐', '辦公室', '人體工學', 'ergonomic', '上班族'], titles: ['久坐腰痛怎麼調整？椅子高度與每小時活動方法', '上班族肩頸痠痛：螢幕不是越高越好', '站立辦公真的比較健康嗎？久坐與久站如何交替'], summary: '提供上班族可直接執行的工作站調整、活動休息與症狀警訊。', rationale: '新竹科技工作族群高度相關，具有在地搜尋和分享潛力。', keywords: ['久坐腰痛怎麼辦', '辦公室肩頸痠痛', '站立辦公腰痛'], patientRelevance: 97, clinicalFit: 96 },
   { key: 'exercise-recovery', category: '運動恢復', probe: '運動後 肌肉痠痛 幾天', terms: ['運動後痠痛', '肌肉痠痛', 'DOMS', 'recovery'], titles: ['運動後痠痛幾天算正常？受傷與延遲性痠痛怎麼分', '重訓後可以按摩或泡熱水嗎？恢復方法一次看', '痠痛還能繼續運動嗎？用三個指標判斷'], summary: '區分正常訓練反應和拉傷警訊，整理恢復、休息與重返訓練原則。', rationale: '健身族群常在運動後立即搜尋，適合搶占具時效的症狀問句。', keywords: ['運動後肌肉痠痛幾天', '痠痛可以繼續運動嗎', 'DOMS肌肉痠痛'], patientRelevance: 96, clinicalFit: 94 },
   { key: 'achilles', category: '足踝疼痛', probe: '阿基里斯腱痛 跑步', terms: ['阿基里斯腱', '跟腱', 'achilles'], titles: ['跑步後腳跟上方痛，是阿基里斯腱炎嗎？', '阿基里斯腱痛可以繼續跑嗎？負荷調整與復健', '突然像被踢到小腿：阿基里斯腱斷裂有哪些警訊'], summary: '說明跟腱過度使用和急性斷裂的差異，提供負荷管理與就醫時機。', rationale: '跑者與球類運動者常見，症狀型關鍵字具有清楚搜尋意圖。', keywords: ['阿基里斯腱痛跑步', '跟腱炎復健', '阿基里斯腱斷裂症狀'], patientRelevance: 93, clinicalFit: 97 },
@@ -103,7 +103,10 @@ async function fetchNewsSignals(): Promise<NewsSignal[]> {
   const unique = new Map<string, NewsSignal>();
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
-    for (const item of result.value) unique.set(item.title, item);
+    for (const item of result.value) {
+      const storyKey = item.title.replace(/\s+-\s+[^-]+$/, '').replace(/\s+/g, ' ').trim();
+      if (!unique.has(storyKey)) unique.set(storyKey, item);
+    }
   }
   return [...unique.values()];
 }
@@ -138,12 +141,15 @@ function matchesProfile(text: string, profile: TopicProfile): boolean {
 }
 
 function chooseTitle(profile: TopicProfile, runDate: string, recentTitles: string[]): string {
-  const start = hash(`${runDate}-${profile.key}`) % profile.titles.length;
-  for (let offset = 0; offset < profile.titles.length; offset += 1) {
-    const title = profile.titles[(start + offset) % profile.titles.length];
+  const month = Number(runDate.slice(5, 7));
+  const seasonalTitles = profile.titles.filter((title) => !title.includes('寒流') || [11, 12, 1, 2].includes(month));
+  const availableTitles = seasonalTitles.length ? seasonalTitles : profile.titles;
+  const start = hash(`${runDate}-${profile.key}`) % availableTitles.length;
+  for (let offset = 0; offset < availableTitles.length; offset += 1) {
+    const title = availableTitles[(start + offset) % availableTitles.length];
     if (!recentTitles.includes(title)) return title;
   }
-  return profile.titles[start];
+  return availableTitles[start];
 }
 
 export async function discoverDailyTopics(input: {

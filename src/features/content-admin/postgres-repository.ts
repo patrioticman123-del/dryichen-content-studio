@@ -168,7 +168,7 @@ export async function listPostgresTopics(): Promise<ContentTopic[]> {
   return loadTopics();
 }
 
-export async function refreshPostgresDailyTopics(): Promise<DailyTopicRefreshResult> {
+export async function refreshPostgresDailyTopics(options: { force?: boolean } = {}): Promise<DailyTopicRefreshResult> {
   await initializeDatabase();
   const db = database();
   const runDate = taipeiDate();
@@ -185,13 +185,13 @@ export async function refreshPostgresDailyTopics(): Promise<DailyTopicRefreshRes
       `SELECT id, status FROM topic_runs WHERE run_date = $1 AND timezone = 'Asia/Taipei'`, [runDate],
     );
     const row = existing.rows[0];
-    if (row?.status === 'completed') {
+    if (row?.status === 'completed' && !options.force) {
       return { runDate, created: false, topics: await loadTopics(row.id) };
     }
     const reclaimed = await db.query<{ id: string }>(
       `UPDATE topic_runs SET status = 'running', started_at = NOW(), completed_at = NULL, error_message = NULL
-       WHERE id = $1 AND (status = 'failed' OR started_at < NOW() - INTERVAL '20 minutes') RETURNING id`,
-      [row?.id || runId],
+       WHERE id = $1 AND (status = 'failed' OR started_at < NOW() - INTERVAL '20 minutes' OR ($2::boolean AND status = 'completed')) RETURNING id`,
+      [row?.id || runId, Boolean(options.force)],
     );
     if (!reclaimed.rowCount) return { runDate, created: false, pending: true, topics: [] };
   }
@@ -212,16 +212,25 @@ export async function refreshPostgresDailyTopics(): Promise<DailyTopicRefreshRes
       recentTitles: titleResult.rows.map((row) => row.title),
     });
 
+    if (options.force) {
+      await db.query(
+        `UPDATE topics SET deleted_at = NOW(), updated_at = NOW()
+         WHERE run_id = $1 AND status NOT IN ('saved', 'drafting', 'generating')`, [runId],
+      );
+    }
+
     for (const topic of topics) {
       await db.query(
         `INSERT INTO topics (id, run_id, title, category, summary, rationale, score, status, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category,
            summary = EXCLUDED.summary, rationale = EXCLUDED.rationale, score = EXCLUDED.score,
-           updated_at = EXCLUDED.updated_at`,
+           updated_at = EXCLUDED.updated_at, deleted_at = NULL`,
         [topic.id, runId, topic.title, topic.category, topic.summary, topic.rationale,
           JSON.stringify(topic.score), topic.status, topic.discoveredAt],
       );
+      await db.query(`DELETE FROM topic_keywords WHERE topic_id = $1`, [topic.id]);
+      await db.query(`DELETE FROM topic_sources WHERE topic_id = $1`, [topic.id]);
       for (const [position, keyword] of topic.longTailKeywords.entries()) {
         await db.query(
           `INSERT INTO topic_keywords (id, topic_id, keyword, position) VALUES ($1, $2, $3, $4)

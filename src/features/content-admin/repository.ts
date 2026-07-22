@@ -36,14 +36,14 @@ export async function listTopics(): Promise<ContentTopic[]> {
   ).sort((a, b) => b.score.total - a.score.total);
 }
 
-export async function refreshDailyTopics(): Promise<DailyTopicRefreshResult> {
+export async function refreshDailyTopics(options: { force?: boolean } = {}): Promise<DailyTopicRefreshResult> {
   if (process.env.CONTENT_ADMIN_STORAGE === 'postgres') {
-    return (await import('./postgres-repository')).refreshPostgresDailyTopics();
+    return (await import('./postgres-repository')).refreshPostgresDailyTopics(options);
   }
   const store = await readStore();
   const runDate = taipeiDate();
   const existing = store.topics.filter((topic) => topic.runDate === runDate);
-  if (existing.length) return { runDate, created: false, topics: existing.sort((a, b) => b.score.total - a.score.total) };
+  if (existing.length && !options.force) return { runDate, created: false, topics: existing.sort((a, b) => b.score.total - a.score.total) };
   const recentCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const recent = store.topics.filter((topic) => topic.discoveredAt >= recentCutoff);
   const topics = await discoverDailyTopics({
@@ -51,7 +51,8 @@ export async function refreshDailyTopics(): Promise<DailyTopicRefreshResult> {
     recentTopicIds: recent.map((topic) => topic.id),
     recentTitles: store.topics.map((topic) => topic.title),
   });
-  store.topics.push(...topics);
+  if (options.force) store.topics = store.topics.filter((topic) => topic.runDate !== runDate || ['saved', 'drafting', 'generating'].includes(topic.status));
+  store.topics.push(...topics.filter((topic) => !store.topics.some((existingTopic) => existingTopic.id === topic.id)));
   await writeStore(store);
   return { runDate, created: true, topics };
 }

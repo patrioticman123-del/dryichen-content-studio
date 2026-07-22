@@ -4,9 +4,10 @@ import { listTopics, refreshDailyTopics } from '@/features/content-admin/reposit
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const result = await refreshDailyTopics();
+    const force = new URL(request.url).searchParams.get('force') === '1';
+    const result = await refreshDailyTopics({ force });
     return NextResponse.json({ success: true, ...result, topics: await listTopics() });
   } catch (error) {
     console.error('Manual content topic discovery failed:', error);
