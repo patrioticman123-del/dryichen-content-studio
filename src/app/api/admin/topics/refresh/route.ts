@@ -7,8 +7,17 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
     const force = new URL(request.url).searchParams.get('force') === '1';
-    const result = await refreshDailyTopics({ force });
-    return NextResponse.json({ success: true, ...result, topics: await listTopics() });
+    const url = new URL(request.url);
+    const requestedCount = Number(url.searchParams.get('count'));
+    const count = Number.isFinite(requestedCount) ? Math.min(5, Math.max(1, requestedCount)) : undefined;
+    const excludeCurrent = url.searchParams.get('excludeCurrent') === '1';
+    const result = await refreshDailyTopics({
+      force,
+      count,
+      excludeCurrent,
+      variationSeed: excludeCurrent ? `reroll-${Date.now()}` : undefined,
+    });
+    return NextResponse.json({ success: true, ...result, generatedCount: result.topics.length, topics: await listTopics() });
   } catch (error) {
     console.error('Manual content topic discovery failed:', error);
     return NextResponse.json({

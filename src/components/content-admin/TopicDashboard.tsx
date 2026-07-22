@@ -16,6 +16,7 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
   const [topics, setTopics] = useState(initialTopics);
   const [busyId, setBusyId] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
+  const [rerolling, setRerolling] = useState(false);
   const [filter, setFilter] = useState<'active' | TopicStatus>('active');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(initialNotice);
@@ -60,6 +61,25 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
     }
   }
 
+  async function rerollTopics() {
+    if (!window.confirm('將排除今天已顯示且尚未收藏的題目，重新搜尋另外 3 題。已收藏或已有草稿的內容會保留。確定繼續嗎？')) return;
+    setRerolling(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch('/api/admin/topics/refresh?force=1&excludeCurrent=1&count=3', { method: 'POST' });
+      const result = await response.json().catch(() => ({ error: '伺服器回應格式錯誤。' }));
+      if (!response.ok) return setError(result.error || '強制更新失敗，請稍後再試。');
+      setTopics(result.topics);
+      setFilter('active');
+      setNotice(`已排除原本的今日題目，重新交叉搜尋並提供 ${result.generatedCount || 3} 個不同議題。明天仍會照正常排程更新。`);
+    } catch {
+      setError('網路連線中斷，原本的題目仍然保留，請稍後再試。');
+    } finally {
+      setRerolling(false);
+    }
+  }
+
   return (
     <div>
       <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -68,9 +88,14 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
             <p className="font-black text-slate-900">每日熱門議題搜尋</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">台灣時間凌晨 00:00 排程；Vercel 免費版可能在 00:00–00:59 之間執行。早上首次開啟也會自動補跑。</p>
           </div>
-          <button type="button" onClick={refreshTopics} disabled={refreshing} className="min-h-11 shrink-0 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50">
-            {refreshing ? '正在交叉搜尋…' : '檢查今日議題'}
-          </button>
+          <div className="grid shrink-0 gap-2 sm:min-w-44">
+            <button type="button" onClick={refreshTopics} disabled={refreshing || rerolling} className="min-h-11 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50">
+              {refreshing ? '正在交叉搜尋…' : '檢查今日議題'}
+            </button>
+            <button type="button" onClick={rerollTopics} disabled={refreshing || rerolling} className="min-h-11 rounded-xl border border-amber-300 bg-amber-50 px-4 text-sm font-black text-amber-800 hover:bg-amber-100 disabled:opacity-50">
+              {rerolling ? '正在重新找 3 題…' : '強制換一批（3 題）'}
+            </button>
+          </div>
         </div>
       </section>
 

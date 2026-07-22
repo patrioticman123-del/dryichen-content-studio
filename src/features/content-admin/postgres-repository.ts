@@ -5,6 +5,7 @@ import { discoverDailyTopics, taipeiDate } from './topic-discovery';
 import type {
   ArticleVersion,
   ContentTopic,
+  DailyTopicRefreshOptions,
   DailyTopicRefreshResult,
   GeneratedArticle,
   TopicSourceSignal,
@@ -168,7 +169,7 @@ export async function listPostgresTopics(): Promise<ContentTopic[]> {
   return loadTopics();
 }
 
-export async function refreshPostgresDailyTopics(options: { force?: boolean } = {}): Promise<DailyTopicRefreshResult> {
+export async function refreshPostgresDailyTopics(options: DailyTopicRefreshOptions = {}): Promise<DailyTopicRefreshResult> {
   await initializeDatabase();
   const db = database();
   const runDate = taipeiDate();
@@ -197,19 +198,23 @@ export async function refreshPostgresDailyTopics(options: { force?: boolean } = 
   }
 
   try {
-    const [recentResult, titleResult] = await Promise.all([
+    const [recentResult, titleResult, currentResult] = await Promise.all([
       db.query<{ id: string }>(
         `SELECT t.id FROM topics t JOIN topic_runs r ON r.id = t.run_id
-         WHERE r.run_date >= $1::date - INTERVAL '3 days' AND r.run_date < $1::date`, [runDate],
+         WHERE t.deleted_at IS NULL AND r.run_date >= $1::date - INTERVAL '3 days' AND r.run_date < $1::date`, [runDate],
       ),
       db.query<{ title: string }>(
         `SELECT title FROM topics WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 200`,
       ),
+      db.query<{ id: string }>(`SELECT id FROM topics WHERE run_id = $1`, [runId]),
     ]);
     const topics = await discoverDailyTopics({
       runDate,
       recentTopicIds: recentResult.rows.map((row) => row.id),
       recentTitles: titleResult.rows.map((row) => row.title),
+      excludedTopicIds: options.excludeCurrent ? currentResult.rows.map((row) => row.id) : [],
+      count: options.count,
+      variationSeed: options.variationSeed,
     });
 
     if (options.force) {

@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createSeedStore } from './seed';
 import { discoverDailyTopics, taipeiDate } from './topic-discovery';
-import type { ContentAdminStore, ContentTopic, DailyTopicRefreshResult, GeneratedArticle, TopicStatus } from './types';
+import type { ContentAdminStore, ContentTopic, DailyTopicRefreshOptions, DailyTopicRefreshResult, GeneratedArticle, TopicStatus } from './types';
 
 const dataDirectory = path.join(process.cwd(), '.local-data');
 const dataFile = path.join(dataDirectory, 'content-admin.json');
@@ -36,7 +36,7 @@ export async function listTopics(): Promise<ContentTopic[]> {
   ).sort((a, b) => b.score.total - a.score.total);
 }
 
-export async function refreshDailyTopics(options: { force?: boolean } = {}): Promise<DailyTopicRefreshResult> {
+export async function refreshDailyTopics(options: DailyTopicRefreshOptions = {}): Promise<DailyTopicRefreshResult> {
   if (process.env.CONTENT_ADMIN_STORAGE === 'postgres') {
     return (await import('./postgres-repository')).refreshPostgresDailyTopics(options);
   }
@@ -50,6 +50,9 @@ export async function refreshDailyTopics(options: { force?: boolean } = {}): Pro
     runDate,
     recentTopicIds: recent.map((topic) => topic.id),
     recentTitles: store.topics.map((topic) => topic.title),
+    excludedTopicIds: options.excludeCurrent ? existing.map((topic) => topic.id) : [],
+    count: options.count,
+    variationSeed: options.variationSeed,
   });
   if (options.force) store.topics = store.topics.filter((topic) => topic.runDate !== runDate || ['saved', 'drafting', 'generating'].includes(topic.status));
   store.topics.push(...topics.filter((topic) => !store.topics.some((existingTopic) => existingTopic.id === topic.id)));

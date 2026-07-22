@@ -78,6 +78,13 @@ export interface DailyTopicRefreshResult {
   topics: ContentTopic[];
 }
 
+export interface DailyTopicRefreshOptions {
+  force?: boolean;
+  count?: number;
+  excludeCurrent?: boolean;
+  variationSeed?: string;
+}
+
 export interface ApprovalCheck {
   id: string;
   label: string;

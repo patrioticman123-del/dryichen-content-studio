@@ -156,13 +156,20 @@ export async function discoverDailyTopics(input: {
   runDate: string;
   recentTopicIds?: string[];
   recentTitles?: string[];
+  excludedTopicIds?: string[];
+  count?: number;
+  variationSeed?: string;
 }): Promise<ContentTopic[]> {
   const recentIds = input.recentTopicIds || [];
+  const excludedIds = input.excludedTopicIds || [];
   const recentTitles = input.recentTitles || [];
-  const freshProfiles = TOPIC_PROFILES.filter((profile) => !recentIds.some((id) => id.endsWith(`-${profile.key}`)));
+  const selectionSeed = `${input.runDate}-${input.variationSeed || 'daily'}`;
+  const freshProfiles = TOPIC_PROFILES.filter((profile) =>
+    ![...recentIds, ...excludedIds].some((id) => id.endsWith(`-${profile.key}`)),
+  );
   const pool = freshProfiles.length >= 12 ? freshProfiles : TOPIC_PROFILES;
   const suggestionProfiles = [...pool]
-    .sort((left, right) => hash(`${input.runDate}-${left.key}`) - hash(`${input.runDate}-${right.key}`))
+    .sort((left, right) => hash(`${selectionSeed}-${left.key}`) - hash(`${selectionSeed}-${right.key}`))
     .slice(0, 14);
 
   const [newsResult, literatureResult, ...suggestionResults] = await Promise.allSettled([
@@ -191,7 +198,7 @@ export async function discoverDailyTopics(input: {
     const searchIntent = Math.min(98, 72 + Math.min(suggestions.length, 5) * 4 + (newsMatches.length ? 4 : 0));
     const differentiation = Math.min(95, 72 + evidenceTypes * 7 + (recentIds.some((id) => id.endsWith(`-${profile.key}`)) ? -18 : 5));
     const evidenceText = [...suggestions, ...newsMatches.map((item) => item.title), ...literatureMatches.map((item) => item.title)].join(' ');
-    let title = chooseTitle(profile, input.runDate, recentTitles);
+    let title = chooseTitle(profile, `${input.runDate}-${input.variationSeed || ''}`, recentTitles);
     if (profile.key === 'child-growth') {
       if (/性早熟/.test(evidenceText)) title = profile.titles[2];
       else if (/骨齡|長不高|身高停滯|長高變慢|生長遲緩/.test(evidenceText)) title = profile.titles[0];
@@ -249,7 +256,8 @@ export async function discoverDailyTopics(input: {
     if (right.topic.score.total !== left.topic.score.total) return right.topic.score.total - left.topic.score.total;
     return right.evidenceCount - left.evidenceCount;
   });
-  return ranked.slice(0, 5).map((item) => item.topic);
+  const eligible = ranked.filter((item) => !excludedIds.some((id) => id === item.topic.id));
+  return eligible.slice(0, Math.min(5, Math.max(1, input.count || 5))).map((item) => item.topic);
 }
 
 export function taipeiDate(date = new Date()): string {
