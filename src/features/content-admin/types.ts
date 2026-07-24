@@ -12,7 +12,7 @@ export interface TopicScore {
 
 export interface TopicSourceSignal {
   label: string;
-  sourceType: 'official' | 'search-trend' | 'news' | 'medical-literature' | 'clinic-observation';
+  sourceType: 'official' | 'search-trend' | 'news' | 'medical-literature' | 'clinic-observation' | 'social' | 'advertising';
   note: string;
   url?: string;
 }

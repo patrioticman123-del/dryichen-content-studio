@@ -18,5 +18,5 @@ export default async function ContentTopicsPage() {
     initialNotice = '今日自動搜尋暫時失敗，目前先保留上一批議題；可按下方按鈕重新嘗試。';
   }
   const topics = await listTopics();
-  return <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-8 md:py-10"><div className="mx-auto max-w-3xl"><AdminHeader title="文章工作台" subtitle="每天交叉檢查搜尋問句、近期台灣新聞與 PubMed 新研究，再依骨科復健相關性排序。" /><TopicDashboard initialTopics={topics} initialNotice={initialNotice} /></div></div>;
+  return <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-8 md:py-10"><div className="mx-auto max-w-3xl"><AdminHeader title="文章工作台" subtitle="每天交叉比較 Google Trends、搜尋問句、近期新聞、PubMed、Meta 廣告與 Threads 話題，再依時效與骨科復健相關性排序。" /><TopicDashboard initialTopics={topics} initialNotice={initialNotice} /></div></div>;
 }
