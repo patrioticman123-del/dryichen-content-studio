@@ -38,7 +38,7 @@ test('Claude handoff includes topic, complete layout, draft and user changes wit
   const prompt = buildClaudeHandoffPrompt(buildArticlePrompt(topic), article, '多寫就醫時機');
   assert.match(prompt, /多寫就醫時機/); assert.match(prompt, /modern-table/); assert.match(prompt, /重新上網查證/); assert.match(prompt, /test-knee/);
   assert.match(prompt, /少用英文/); assert.match(prompt, /不足時寧可少列/);
-  assert.match(prompt, /臨床獨特見解 #2/); assert.match(prompt, /Q4：什麼情況需要看醫師/); assert.match(prompt, /至少應有 6 篇/);
+  assert.match(prompt, /臨床獨特見解 #2/); assert.match(prompt, /Q4：什麼情況需要看醫師/); assert.match(prompt, /至少應有 6 篇/); assert.match(prompt, /overflow-x:auto/); assert.match(prompt, /background-color:#1e3a8a/);
   assert.doesNotMatch(buildClaudeHandoffPrompt('base'), /test-knee/);
 });
 

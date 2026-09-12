@@ -55,10 +55,10 @@ export const ARTICLE_CODE_TEMPLATE = `{
 <section style="margin-bottom:3.5rem;">
   <h2 style="font-size:1.75rem;font-weight:bold;color:#ffffff;margin-bottom:1.5rem;">二、重點比較表</h2>
   <p style="color:#cbd5e1;line-height:1.7;font-size:1.1rem;margin-bottom:1.5rem;">先用白話說明讀表方式、適用限制與重要結論，必要處加入論文引用。</p>
-  <div class="custom-table-container">
-    <table class="modern-table">
-      <thead><tr><th>比較項目</th><th>特色</th><th>注意事項</th><th>適用情況</th></tr></thead>
-      <tbody><tr><td>項目一</td><td>內容</td><td>內容</td><td>內容</td></tr></tbody>
+  <div class="custom-table-container" style="width:100%;overflow-x:auto;margin:20px 0;border-radius:8px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);">
+    <table class="modern-table" style="width:100%;border-collapse:collapse;font-family:'PingFang TC','Microsoft JhengHei',sans-serif;font-size:15px;background-color:#ffffff;color:#1f2937;min-width:850px;">
+      <thead><tr style="background-color:#1e3a8a;color:#ffffff;text-align:left;font-weight:bold;"><th style="padding:16px 12px;border-bottom:2px solid #111827;">比較項目</th><th style="padding:16px 12px;border-bottom:2px solid #111827;">特色</th><th style="padding:16px 12px;border-bottom:2px solid #111827;">注意事項</th><th style="padding:16px 12px;border-bottom:2px solid #111827;">適用情況</th></tr></thead>
+      <tbody><tr><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;">項目一</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td></tr><tr style="background-color:#f3f4f6;"><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;font-weight:600;">項目二</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td><td style="padding:14px 12px;border-bottom:1px solid #e5e7eb;">完整內容</td></tr></tbody>
     </table>
   </div>
 </section>
