@@ -45,6 +45,7 @@ test('Claude handoff includes topic, complete layout, draft and user changes wit
 test('strict draft validation requires the full layout and scholarly references', () => {
   assert.doesNotThrow(() => validateDraftArticle(complete));
   assert.doesNotThrow(() => validateDraftArticle({ ...complete, referencesHtml: completeReferences.replace(/https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/10000000\//, 'https://link.springer.com/article/10.1000/test').replace('PubMed</a></li>', 'Journal article (2025)</a></li>') }));
+  assert.doesNotThrow(() => validateDraftArticle({ ...complete, referencesHtml: completeReferences.replace(/https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/10000000\//, 'https://publisher.example.org/record/123').replace('PubMed</a></li>', 'Systematic Review (2025)</a></li>') }));
   assert.throws(() => validateDraftArticle(article), /格式或論文查證未達標/);
   assert.throws(() => validateDraftArticle({ ...complete, referencesHtml: '<ol><li><a href="https://example.com/news">新聞</a></li></ol>' }), /學術論文/);
 });

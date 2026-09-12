@@ -68,9 +68,10 @@ export function validateDraftArticle(article: ExternalArticleCode): void {
   const scholarly = referenceItems.filter((item) => {
     const href = item.match(/href=["'](https:\/\/[^"']+)/i)?.[1] || '';
     const recognizedPaperUrl = /(?:dx\.)?doi\.org\/|pubmed\.ncbi\.nlm\.nih\.gov\/|ncbi\.nlm\.nih\.gov\/(?:pmc\/articles|articles\/PMC)|\/(?:doi|article|articles|paper|publication)\/|\.pdf(?:[?#]|$)|springer\.com\/|sciencedirect\.com\/|wiley\.com\/|bmj\.com\/|thelancet\.com\/|jamanetwork\.com\/|academic\.oup\.com\/|frontiersin\.org\/|mdpi\.com\/|plos\.org\/|cochranelibrary\.com\/|nature\.com\//i.test(href);
-    const citationLike = /(?:19|20)\d{2}|PubMed|PMC|DOI|Journal|期刊|Review|Guideline|Study/i.test(item);
+    const hasYear = /(?:19|20)\d{2}/.test(item);
+    const citationLike = hasYear && /PubMed|PMC|DOI|Journal|期刊|Review|Guideline|Study|Systematic|Meta-analysis|et al\.?|臨床指引|系統性回顧|統合分析|研究/i.test(item);
     const blocked = /facebook\.com|threads\.net|instagram\.com|youtube\.com|wikipedia\.org|google\.com\/search|新聞|部落格|診所網頁/i.test(item);
-    return recognizedPaperUrl && citationLike && !blocked;
+    return Boolean(href) && citationLike && !blocked && (recognizedPaperUrl || /^https:\/\//i.test(href));
   });
   const citations = [...html.matchAll(/>\s*\[(\d+)]\s*</g)].map((match) => Number(match[1]));
   const placeholders = /文章主標題|第一個重要段落|第二個常見問題|本主題常見錯誤說法|正文待補|此處填入|待 Claude 查證|需人工查證/;
