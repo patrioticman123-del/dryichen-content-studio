@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "test:content-preview": "node --test scripts/content-preview.test.cjs",
     "lint": "next lint",
     "go": "git add . && git commit -m \"Update: Optimization config\" && git push"
   },

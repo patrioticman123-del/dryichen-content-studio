@@ -14,9 +14,9 @@ export default async function ArticlePromptPage({ params }: { params: { id: stri
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-8 md:py-10">
       <div className="mx-auto max-w-3xl">
-        <AdminHeader title="文章提示詞與預覽" subtitle="複製提示詞到 GPT 或 Claude，再把完整文章程式碼貼回來預覽。" />
+        <AdminHeader title="AI 初稿、Claude 與預覽" subtitle="免費 AI 先試寫，確認方向後交給 Claude；貼回程式碼即可預覽完整文章。" />
         <Link href="/admin/content-topics" className="mb-5 inline-flex text-sm font-bold text-teal-700 hover:text-teal-900">← 返回文章工作台</Link>
-        <PromptArticleWorkspace topic={topic} prompt={buildArticlePrompt(topic)} />
+        <PromptArticleWorkspace key={topic.id} topic={topic} prompt={buildArticlePrompt(topic)} />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { ContentTopic } from './types';
+import { readArticleObject } from './article-code-parser';
 
 export interface ExternalArticleCode {
   id: string;
@@ -106,7 +107,7 @@ export function buildArticlePrompt(topic: ContentTopic): string {
     `${index + 1}. ${source.label}（${source.sourceType}）：${source.note}${source.url ? `\n   ${source.url}` : ''}`,
   ).join('\n');
 
-  return `幫我寫一篇完整的繁體中文醫療衛教文章，並給我可直接貼回網站的完整 JavaScript 文章物件程式碼。用一般民眾看得懂的語言撰寫。
+  return `請先開啟網路搜尋與查證功能，幫我寫一篇完整的繁體中文醫療衛教文章，並給我可直接貼回網站預覽的完整 JavaScript 文章物件程式碼。這不是 React／Next.js 頁面，也不要產生整個專案。
 
 【本次文章任務】
 主題：${topic.title}
@@ -120,65 +121,58 @@ ${sourceSignals || '目前沒有來源線索，請自行查找可驗證的一手
 
 【研究與醫療安全要求】
 1. 先查證資料再寫作，優先使用 PubMed、PMC、DOI 原始論文、系統性回顧、醫學會或政府官方資料。
-2. 參考文獻至少 10 篇；內文每項重要醫療主張、數字與治療效果後都要用 [1]、[2] 形式標註，編號必須與 referencesHtml 完全一致。
+2. 優先查找至少 10 篇直接相關、可驗證的參考資料；不足時寧可少列並清楚說明限制，不可為了湊數杜撰。內文重要醫療主張、數字與治療效果後要用 [1]、[2] 形式標註，編號必須與 referencesHtml 完全一致。
 3. 最前面的「總結摘要與核心觀點」至少引用 3 篇不同文獻。
 4. 絕對不可捏造作者、年份、論文、DOI、PubMed/PMC 編號、網址、統計數字或名人案例。無法查證的內容不要寫，或明確標示「需人工查證」。
 5. 不得做個人診斷、保證療效或提供取代就醫的處方；需列出警訊、就醫時機與醫療安全提醒。
 6. 臨床觀點只能寫一般性觀察，不可捏造病人故事，也不可替林醫師創造未提供的專長或經歷。
 7. 全文需有 6 至 8 個主要章節、重點比較表、三大常見誤區、4 至 6 題 FAQ、結語與行動建議。
+8. 用台灣一般民眾看得懂的繁體中文，多說明結論、能怎麼做與何時該就醫；少用英文與艱深術語，必要術語先用白話解釋。
+9. 不要在正文逐篇交代研究是哪國、什麼設計或收了多少人；研究出處與方法細節放參考資料，正文重點是合理結論及限制。
+10. 時事須核對事件日期與報導日期。新聞、Threads、廣告及搜尋入口只是線索，不是療效證據或已證實的搜尋熱度。不能捏造球星傷勢與病史。
+11. 如果目前不能上網查證，請先告知，不要把未讀過的資料當成已核對文獻。
 
 【輸出格式要求】
 - 只輸出一個完整 JavaScript 文章物件，不要加說明文字，不要省略任何程式碼。
 - 必須包含 id、title、lastModified、category、date、summary、coverImage、seoTitle、seoDescription、keywords、contentHtml、referencesHtml。
 - contentHtml 與 referencesHtml 必須使用反引號包住。
+- 所有欄位都必須是靜態文字，keywords 是文字陣列；不要 import、函式、JSX、React 元件、動態插值或額外的可執行程式。反引號內若需反引號字元請正確跳脫。
+- 不要留下「正文待補」、假連結或範例文字。正文沒有實際圖片時不輸出 img 標籤，保留 coverImage 欄位即可。
 - 排版、文字階層、顏色與參考資料格式必須遵循下列範本；依本次主題替換內容，不要照抄範本中的示意文字。
 
 【文章程式碼範本】
 ${ARTICLE_CODE_TEMPLATE}`;
 }
 
-function extractQuotedField(code: string, key: string, fallback = ''): string {
-  const match = code.match(new RegExp(`\\b${key}\\s*:\\s*(['\"])([\\s\\S]*?)\\1`));
-  return match?.[2]?.trim() || fallback;
-}
-
-function extractTemplateField(code: string, key: string): string {
-  const match = code.match(new RegExp(`\\b${key}\\s*:\\s*\\x60([\\s\\S]*?)\\x60\\s*[,}]`));
-  return match?.[1]?.trim() || '';
-}
-
-function extractKeywords(code: string): string[] {
-  const block = code.match(/\bkeywords\s*:\s*\[([\s\S]*?)\]/)?.[1] || '';
-  return [...block.matchAll(/['"]([^'"]+)['"]/g)].map((match) => match[1].trim()).filter(Boolean).slice(0, 30);
-}
-
 export function parseExternalArticleCode(raw: string): ExternalArticleCode {
-  const code = raw.replace(/^\s*```(?:javascript|js|typescript|ts)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-  if (!code) throw new Error('請先貼上 GPT 或 Claude 生成的完整文章程式碼。');
-  if (code.length > 500_000) throw new Error('貼上的程式碼太長，請確認只貼上一篇文章。');
-
-  const contentHtml = extractTemplateField(code, 'contentHtml');
-  const referencesHtml = extractTemplateField(code, 'referencesHtml');
-  const title = extractQuotedField(code, 'title');
-  const summary = extractQuotedField(code, 'summary');
+  const fields = readArticleObject(raw);
+  const text = (key: string, fallback = '') => typeof fields[key] === 'string' ? (fields[key] as string).trim() : fallback;
+  const contentHtml = text('contentHtml');
+  const referencesHtml = text('referencesHtml');
+  const title = text('title');
+  const summary = text('summary');
   if (!title || !summary || !contentHtml || !referencesHtml) {
     throw new Error('程式碼格式不完整，必須包含 title、summary、contentHtml 與 referencesHtml。');
   }
 
   return {
-    id: extractQuotedField(code, 'id', `article-${Date.now()}`),
+    id: text('id', `article-${Date.now()}`),
     title,
-    lastModified: extractQuotedField(code, 'lastModified'),
-    category: extractQuotedField(code, 'category', '衛教文章'),
-    date: extractQuotedField(code, 'date'),
+    lastModified: text('lastModified'),
+    category: text('category', '衛教文章'),
+    date: text('date'),
     summary,
-    coverImage: extractQuotedField(code, 'coverImage'),
-    seoTitle: extractQuotedField(code, 'seoTitle', title),
-    seoDescription: extractQuotedField(code, 'seoDescription', summary),
-    keywords: extractKeywords(code),
+    coverImage: text('coverImage'),
+    seoTitle: text('seoTitle', title),
+    seoDescription: text('seoDescription', summary),
+    keywords: Array.isArray(fields.keywords) ? fields.keywords.slice(0, 30) : [],
     contentHtml,
     referencesHtml,
   };
+}
+
+export function buildClaudeHandoffPrompt(prompt: string, draft?: ExternalArticleCode, instructions = ''): string {
+  return `${prompt}\n\n【我的正式撰寫要求】\n${instructions.trim() || '請依照上述議題與版型完整撰寫，以白話結論與病患可以採取的行動為主。'}${draft ? `\n\n【免費 AI 初稿：僅供方向參考，不是已查證資料】\n請重新上網查證時事、醫療主張及全部引用；不要沿用未核對的文獻或把原稿的說法當證據。依我的要求修正錯誤、補強內容並輸出完整文章物件。查證完成後移除「AI 初稿」的版型提醒，但保留實際證據限制。\n${JSON.stringify(draft, null, 2)}` : ''}`;
 }
 
 export function sanitizeArticleHtml(html: string): string {

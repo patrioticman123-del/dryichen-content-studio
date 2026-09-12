@@ -1,0 +1,21 @@
+'use client';
+
+import { useState } from 'react';
+import { sanitizeArticleHtml, type ExternalArticleCode } from '@/features/content-admin/article-prompt';
+
+const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!));
+
+export default function ArticleCodePreview({ article, isDraft }: { article: ExternalArticleCode; isDraft: boolean }) {
+  const [mobile, setMobile] = useState(true);
+  const referenceCount = (article.referencesHtml.match(/<li\b/gi) || []).length;
+  const source = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; base-uri 'none'; form-action 'none'"><style>
+*{box-sizing:border-box}body{margin:0;background:#020617;color:#cbd5e1;font-family:system-ui,-apple-system,'Microsoft JhengHei',sans-serif;line-height:1.8}header.site,footer{padding:20px;border-bottom:1px solid #334155}header strong{color:#fff}nav{font-size:12px;color:#94a3b8;margin-top:8px}main{max-width:1000px;margin:24px auto;padding:0 16px}article{padding:24px;background:#1e293b;border:1px solid #334155;border-radius:16px}article>header{border-left:4px solid #06b6d4;padding:16px;margin-bottom:32px;background:linear-gradient(to right,#0f172a,transparent)}h1{font-size:32px;line-height:1.4;color:#fff;margin:20px 0}h2,h3,h4{color:#fff}p{overflow-wrap:anywhere}a{color:#2dd4bf}img{max-width:100%;height:auto}.category{font-size:12px;color:#67e8f9}.references{border-top:1px solid #475569;margin-top:40px;padding-top:24px}.custom-table-container{width:100%;overflow-x:auto;margin:20px 0;border-radius:8px}.modern-table{width:100%;min-width:720px;border-collapse:collapse;font-size:15px;background:#fff;color:#1f2937}.modern-table thead tr{background:#1e3a8a;color:#fff}.modern-table th{padding:16px 12px;border-bottom:2px solid #111827}.modern-table td{padding:14px 12px;border-bottom:1px solid #e5e7eb;line-height:1.6}.modern-table tbody tr:nth-of-type(even){background:#f3f4f6}footer{text-align:center;color:#94a3b8;font-size:12px;margin-top:32px}@media(min-width:768px){article{padding:40px}h1{font-size:46px}}
+@media(max-width:480px){main{padding:0 8px}article{padding:16px}article>header{padding:12px}h1{font-size:28px}}
+</style></head><body><header class="site"><strong>運動教練醫師・林羿辰</strong><nav>關於我們　治療項目　特色門診　疾病衛教　預約</nav></header><main><article><header><span class="category">${escape(article.category)} · ${escape(article.date)} · ${isDraft ? 'AI 試寫初稿' : '貼回程式碼預覽'}</span><h1>${escape(article.title)}</h1><p>${escape(article.summary)}</p></header>${sanitizeArticleHtml(article.contentHtml)}<section class="references">${sanitizeArticleHtml(article.referencesHtml)}</section></article></main><footer>宸新復健科診所・林羿辰醫師<br>導覽文字僅保留樣式，不連向其他文章或疾病頁面。</footer></body></html>`;
+  return <section className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-5">
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-black text-slate-900">{isDraft ? '免費 AI 初稿預覽' : 'Claude 程式碼預覽'}</h2><div className="flex gap-2"><button onClick={() => setMobile(true)} aria-pressed={mobile} className={`min-h-11 rounded-lg border px-3 text-sm ${mobile ? 'bg-teal-50 text-teal-800' : 'text-slate-600'}`}>手機</button><button onClick={() => setMobile(false)} aria-pressed={!mobile} className={`min-h-11 rounded-lg border px-3 text-sm ${!mobile ? 'bg-teal-50 text-teal-800' : 'text-slate-600'}`}>寬版</button></div></div>
+    <p className="mt-3 text-xs leading-6 text-slate-500">{isDraft ? '初稿未經即時搜尋查證，請交給 Claude 查證後再正式撰寫。' : '成功預覽不代表醫療內容正確，發布前仍需人工審閱。'} 共偵測到 {referenceCount} 個參考資料項目，不代表已核對 {referenceCount} 篇文獻。</p>
+    <p className="mb-3 text-xs text-slate-500">在下方預覽內向下捲動可看完整文章；表格可左右滑動。沒有實際卡片圖時不顯示空白圖片框。</p>
+    <iframe title={isDraft ? '免費 AI 完整初稿' : 'Claude 完整文章'} sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" srcDoc={source} className={`mx-auto block h-[75vh] min-h-[560px] w-full rounded-xl border border-slate-700 bg-slate-950 ${mobile ? 'max-w-[390px]' : ''}`} />
+  </section>;
+}

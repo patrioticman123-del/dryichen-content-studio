@@ -97,7 +97,7 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
       if (!response.ok) return setError(result.error || '強制更新失敗，請稍後再試。');
       setTopics(result.topics);
       setFilter('active');
-      setNotice(`原本未收藏的今日題目已移到「過去議題」，並重新提供 ${result.generatedCount || 3} 個不同議題。明天仍會照正常排程更新。`);
+      setNotice(result.pending ? '本輪議題搜尋仍在進行中，目前先顯示原有題目。可稍後按「檢查今日議題」，明天仍正常更新。' : `原本未收藏的今日題目已移到「過去議題」，並重新提供 ${result.generatedCount || 3} 個不同議題。明天仍會照正常排程更新。`);
     } catch {
       setError('網路連線中斷，原本的題目仍然保留，請稍後再試。');
     } finally {
@@ -206,7 +206,7 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
                 onClick={() => openPrompt(topic)}
                 className="col-span-2 min-h-12 rounded-xl bg-teal-600 px-4 text-sm font-black text-white hover:bg-teal-700 disabled:opacity-50"
               >
-                產生文章提示詞
+                選擇這題 · AI 初稿／Claude 提示詞
               </button>
               {topic.articleId && <button onClick={() => router.push(`/admin/articles/${topic.articleId}/preview`)} className="col-span-2 min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">開啟既有文章預覽</button>}
             </div>

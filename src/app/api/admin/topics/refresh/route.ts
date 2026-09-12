@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     const force = new URL(request.url).searchParams.get('force') === '1';
     const url = new URL(request.url);
-    const requestedCount = Number(url.searchParams.get('count'));
+    const requestedCount = url.searchParams.has('count') ? Number(url.searchParams.get('count')) : NaN;
     const count = Number.isFinite(requestedCount) ? Math.min(5, Math.max(1, requestedCount)) : undefined;
     const excludeCurrent = url.searchParams.get('excludeCurrent') === '1';
     const result = await refreshDailyTopics({
