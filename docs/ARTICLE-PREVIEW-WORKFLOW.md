@@ -12,7 +12,7 @@
 
 - 2026-09-12 核對 Google 文件，先用 `gemini-3.8-flash`；若遇到 404、5xx、截斷或短模板，才退回同樣有 Free tier 的 `gemini-3.5-flash-lite`。429 額度不足、金鑰錯誤或安全阻擋不退回。模型有 Free tier，不代表使用付費專案金鑰也免費；必須使用尚未啟用付費的 AI Studio 專案。
 - Vercel 設定 `GEMINI_API_KEY`，或沿用 `GOOGLE_API_KEY`，金鑰只能存在伺服器環境變數。
-- 初稿分成兩段：先由 Gemini 2.5 Flash 使用免費 Google Search 整理論文，再由 Gemini 3.8 Flash（失敗時改用 3.5 Flash-Lite）依完整範本寫作。系統會拒絕缺少必要版型、至少 6 篇 DOI/PubMed/PMC 論文或引用編號錯誤的結果。自動搜尋不等於人工審稿，正式使用前仍須逐篇打開論文核對。Google 免費服務可能用輸入改善產品，不輸入病患個資。
+- 初稿分成兩段：先由 Gemini 2.5 Flash 使用免費 Google Search 整理論文，再由 Gemini 3.8 Flash（失敗時改用 3.5 Flash-Lite）依完整範本寫作。系統會拒絕缺少必要版型、至少 6 篇 DOI/PubMed/PMC/期刊原始頁論文、混入新聞或引用編號錯誤的結果。自動搜尋不等於人工審稿，正式使用前仍須逐篇打開論文核對。Google 免費服務可能用輸入改善產品，不輸入病患個資。
 - 無付費備援、無自動重試。每日台灣時間最多 10 次請求（包含失敗）；同時只跑一篇；同題重按沿用處理中任務或已完成快取。
 - Vercel 須啟用 Fluid compute，路由 `maxDuration=300`，上游等待上限 240 秒。未啟用 Fluid 的 Hobby 舊專案最多 60 秒，可能需要在專案設定切換。
 - `CONTENT_ADMIN_STORAGE=postgres` 時，第一次使用建立獨立 `content_free_preview_state` 資料表；本機使用 `.local-data/free-preview-drafts.json`。不更動舊文章資料。

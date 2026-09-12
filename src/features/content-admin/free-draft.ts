@@ -65,7 +65,13 @@ export function validateDraftArticle(article: ExternalArticleCode): void {
   const summary = summaryEnd >= 0 ? html.slice(0, summaryEnd) : '';
   const summaryCitations = new Set([...summary.matchAll(/>\s*\[(\d+)]\s*</g)].map((match) => match[1])).size;
   const referenceItems = article.referencesHtml.match(/<li\b[\s\S]*?<\/li>/gi) || [];
-  const scholarly = referenceItems.filter((item) => /href=["']https:\/\/(?:dx\.)?doi\.org\/|href=["']https:\/\/(?:www\.)?pubmed\.ncbi\.nlm\.nih\.gov\/|href=["']https:\/\/(?:www\.)?ncbi\.nlm\.nih\.gov\/(?:pmc\/articles|articles\/PMC)/i.test(item));
+  const scholarly = referenceItems.filter((item) => {
+    const href = item.match(/href=["'](https:\/\/[^"']+)/i)?.[1] || '';
+    const recognizedPaperUrl = /(?:dx\.)?doi\.org\/|pubmed\.ncbi\.nlm\.nih\.gov\/|ncbi\.nlm\.nih\.gov\/(?:pmc\/articles|articles\/PMC)|\/(?:doi|article|articles|paper|publication)\/|\.pdf(?:[?#]|$)|springer\.com\/|sciencedirect\.com\/|wiley\.com\/|bmj\.com\/|thelancet\.com\/|jamanetwork\.com\/|academic\.oup\.com\/|frontiersin\.org\/|mdpi\.com\/|plos\.org\/|cochranelibrary\.com\/|nature\.com\//i.test(href);
+    const citationLike = /(?:19|20)\d{2}|PubMed|PMC|DOI|Journal|期刊|Review|Guideline|Study/i.test(item);
+    const blocked = /facebook\.com|threads\.net|instagram\.com|youtube\.com|wikipedia\.org|google\.com\/search|新聞|部落格|診所網頁/i.test(item);
+    return recognizedPaperUrl && citationLike && !blocked;
+  });
   const citations = [...html.matchAll(/>\s*\[(\d+)]\s*</g)].map((match) => Number(match[1]));
   const placeholders = /文章主標題|第一個重要段落|第二個常見問題|本主題常見錯誤說法|正文待補|此處填入|待 Claude 查證|需人工查證/;
   const missing: string[] = [];
@@ -78,7 +84,7 @@ export function validateDraftArticle(article: ExternalArticleCode): void {
   if (!/常見三大誤區解析/.test(html)) missing.push('常見三大誤區');
   if (!/FAQ 常見問題/.test(html) || faqQuestions < 4) missing.push('至少 4 題 FAQ');
   if (!/結語與行動建議/.test(html) || !/醫療安全提醒/.test(html)) missing.push('結語、行動建議或醫療安全提醒');
-  if (referenceItems.length < 6 || scholarly.length !== referenceItems.length) missing.push('至少 6 篇附 DOI、PubMed 或 PMC 網址的學術論文');
+  if (referenceItems.length < 6 || scholarly.length !== referenceItems.length) missing.push(`至少 6 篇附 DOI、PubMed、PMC 或期刊原始頁面的學術論文（目前 ${referenceItems.length} 筆，符合 ${scholarly.length} 筆）`);
   if (citations.length < 8 || citations.some((number) => number < 1 || number > referenceItems.length)) missing.push('與參考文獻編號一致的內文引用');
   if (placeholders.test(html) || placeholders.test(article.referencesHtml)) missing.push('尚未替換的範例或待查證文字');
   if (missing.length) throw new GeminiDraftError(`初稿格式或論文查證未達標：${missing.join('、')}。`, true);
