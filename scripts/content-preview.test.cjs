@@ -7,7 +7,7 @@ const ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, filename);
 const { readArticleObject } = require('../src/features/content-admin/article-code-parser.ts');
 const { parseExternalArticleCode, buildArticlePrompt, buildClaudeHandoffPrompt } = require('../src/features/content-admin/article-prompt.ts');
-const { generateFreeDraft, FREE_DRAFT_MODEL } = require('../src/features/content-admin/free-draft.ts');
+const { generateFreeDraft, FREE_DRAFT_MODEL, FREE_DRAFT_MODELS } = require('../src/features/content-admin/free-draft.ts');
 const article = { id: 'test-knee', title: '膝蓋疼痛：測試文章', lastModified: '2026-09-12', category: '衛教文章', date: '2026-09-12', summary: '只供測試的摘要', coverImage: '', seoTitle: '膝痛', seoDescription: '測試', keywords: ['膝痛', '復健'], contentHtml: '<h2>一、重點</h2><p>只供測試的文章。</p>', referencesHtml: '<ol><li>尚未查證</li></ol>' };
 const topic = { id: 'unit-test-topic', title: article.title, category: '復健', summary: article.summary, rationale: '測試', sources: [], longTailKeywords: ['膝蓋痛'], score: { total: 80 }, status: 'new' };
 
@@ -47,9 +47,19 @@ test('Gemini returns a genuine complete draft with no search tools or paid fallb
     return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'hidden thought', thought: true }, { text: JSON.stringify(complete) }] } }] }));
   };
   try {
-    assert.equal((await generateFreeDraft(topic)).title, article.title); assert.equal(calls, 1);
+    const first = await generateFreeDraft(topic);
+    assert.equal(first.article.title, article.title); assert.equal(first.model, FREE_DRAFT_MODEL); assert.equal(calls, 1);
     global.fetch = async () => { calls++; return new Response('{}', { status: 429 }); };
     await assert.rejects(generateFreeDraft(topic), /免費額度/); assert.equal(calls, 2);
+    let fallbackCalls = 0;
+    global.fetch = async (url) => {
+      fallbackCalls++;
+      if (fallbackCalls === 1) { assert.ok(url.includes(FREE_DRAFT_MODELS[0])); return new Response('{}', { status: 503 }); }
+      assert.ok(url.includes(FREE_DRAFT_MODELS[1]));
+      return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(complete) }] } }] }));
+    };
+    const fallback = await generateFreeDraft(topic);
+    assert.equal(fallback.model, FREE_DRAFT_MODELS[1]); assert.equal(fallbackCalls, 2);
     global.fetch = async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] }));
     await assert.rejects(generateFreeDraft(topic), /截斷/);
     global.fetch = async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));

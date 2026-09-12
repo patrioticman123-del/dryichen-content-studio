@@ -10,7 +10,7 @@
 
 ## 免費模型與部署
 
-- 2026-09-11 核對 Google 文件，預設 `gemini-3.8-flash`。模型有 Free tier，不代表使用付費專案金鑰也免費；必須使用尚未啟用付費的 AI Studio 專案。
+- 2026-09-12 核對 Google 文件，先用 `gemini-3.8-flash`；若遇到 404、5xx、截斷或短模板，才退回同樣有 Free tier 的 `gemini-3.5-flash-lite`。429 額度不足、金鑰錯誤或安全阻擋不退回。模型有 Free tier，不代表使用付費專案金鑰也免費；必須使用尚未啟用付費的 AI Studio 專案。
 - Vercel 設定 `GEMINI_API_KEY`，或沿用 `GOOGLE_API_KEY`，金鑰只能存在伺服器環境變數。
 - 生成採一般文字 API，不使用不在本模型免費方案內的 Google Search grounding。所有初稿標示待查證。Google 免費服務可能用輸入改善產品，不輸入病患個資。
 - 無付費備援、無自動重試。每日台灣時間最多 10 次請求（包含失敗）；同時只跑一篇；同題重按沿用處理中任務或已完成快取。
