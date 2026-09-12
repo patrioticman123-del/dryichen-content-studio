@@ -16,7 +16,7 @@ export interface ExternalArticleCode {
   referencesHtml: string;
 }
 
-const ARTICLE_CODE_TEMPLATE = `{
+export const ARTICLE_CODE_TEMPLATE = `{
   id: 'english-kebab-case-slug',
   title: '文章主標題',
   lastModified: 'YYYY-MM-DD',
@@ -32,7 +32,6 @@ const ARTICLE_CODE_TEMPLATE = `{
   <h2 style="margin-top:0;color:#0369a1;">📝 總結摘要與核心觀點</h2>
   <p style="margin-bottom:0;line-height:1.6;color:#334155;">摘要正文；本段至少放入三個對應文獻標號，例如 <sup><a href="已查證網址" target="_blank" rel="noopener noreferrer" style="color:#2dd4bf;text-decoration:underline;">[1]</a></sup></p>
 </div>
-<!-- 若沒有實際圖片檔案，請用註解寫圖片建議，不要捏造圖片路徑 -->
 <hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
 
 <section style="margin-bottom:3.5rem;">
@@ -44,13 +43,18 @@ const ARTICLE_CODE_TEMPLATE = `{
   </ul>
 </section>
 
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
 <div style="background-color:#f0f9ff;padding:1.5rem;border-left:4px solid #0891b2;border-radius:.5rem;margin:1.5rem 0;">
-  <h4 style="margin-top:0;color:#0e7490;font-weight:bold;font-size:1.15rem;margin-bottom:.5rem;">💡 臨床獨特見解</h4>
+  <h4 style="margin-top:0;color:#0e7490;font-weight:bold;font-size:1.15rem;margin-bottom:.5rem;">💡 臨床獨特見解 #1</h4>
   <p style="margin-bottom:0;color:#334155;line-height:1.6;font-size:1.05rem;">只能寫合理的一般臨床觀察，不可捏造病人案例或醫師個人經歷。</p>
 </div>
 
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
 <section style="margin-bottom:3.5rem;">
   <h2 style="font-size:1.75rem;font-weight:bold;color:#ffffff;margin-bottom:1.5rem;">二、重點比較表</h2>
+  <p style="color:#cbd5e1;line-height:1.7;font-size:1.1rem;margin-bottom:1.5rem;">先用白話說明讀表方式、適用限制與重要結論，必要處加入論文引用。</p>
   <div class="custom-table-container">
     <table class="modern-table">
       <thead><tr><th>比較項目</th><th>特色</th><th>注意事項</th><th>適用情況</th></tr></thead>
@@ -59,16 +63,53 @@ const ARTICLE_CODE_TEMPLATE = `{
   </div>
 </section>
 
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
 <section style="margin-bottom:3.5rem;">
-  <div style="background-color:#fffbeb;border:2px solid #fbbf24;border-radius:1rem;padding:1.5rem;margin:2rem 0;">
-    <h2 style="color:#b45309;margin-top:0;font-weight:bold;font-size:1.4rem;border-bottom:2px solid #fcd34d;padding-bottom:.5rem;">📢 常見三大誤區解析</h2>
-    <ol style="color:#92400e;padding-left:1.5rem;line-height:1.7;">
-      <li style="margin-bottom:1rem;"><strong>常見錯誤說法：</strong>正確解釋與引用。</li>
-    </ol>
+  <h2 style="font-size:1.75rem;font-weight:bold;color:#ffffff;margin-bottom:1.5rem;">三、常見症狀、原因或判斷方式</h2>
+  <p style="color:#cbd5e1;line-height:1.7;font-size:1.1rem;margin-bottom:1.5rem;">依本次主題完整說明，不可只保留一小段示意文字；重要醫療主張後加入論文引用。</p>
+  <div style="background-color:#fff7ed;border:1px solid #fed7aa;padding:16px;border-radius:8px;margin-bottom:24px;">
+    <p style="color:#9a3412;font-size:1rem;line-height:1.6;margin:0;"><strong>⚠️ 需要儘快就醫的警訊：</strong><br><br>依主題列出真正需要就醫或緊急處理的狀況，不製造恐慌，也不做個人診斷。</p>
   </div>
 </section>
 
-<!-- 依主題繼續完成約 6 至 8 個完整章節，每章之間放置 hr -->
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
+<section style="margin-bottom:3.5rem;">
+  <h2 style="font-size:1.75rem;font-weight:bold;color:#ffffff;margin-bottom:1.5rem;">四、治療、復健或自我照護怎麼選？</h2>
+  <p style="color:#cbd5e1;line-height:1.7;font-size:1.1rem;margin-bottom:1.5rem;">說明證據支持的選項、限制、何時不適合，以及病患下一步可以怎麼做。</p>
+  <ul style="color:#cbd5e1;list-style-type:disc;padding-left:1.5rem;line-height:1.7;font-size:1.1rem;margin-bottom:2rem;">
+    <li style="margin-bottom:.75rem;"><strong style="color:#ffffff;">第一個實用重點：</strong>完整說明與適用條件。</li>
+    <li style="margin-bottom:.75rem;"><strong style="color:#ffffff;">第二個實用重點：</strong>完整說明與安全限制。</li>
+  </ul>
+</section>
+
+<div style="background-color:#f0f9ff;padding:1.5rem;border-left:4px solid #0891b2;border-radius:.5rem;margin:1.5rem 0;">
+  <h4 style="margin-top:0;color:#0e7490;font-weight:bold;font-size:1.15rem;margin-bottom:.5rem;">💡 臨床獨特見解 #2</h4>
+  <p style="margin-bottom:0;color:#334155;line-height:1.6;font-size:1.05rem;">補充一般臨床判斷重點，以及最容易被民眾誤會之處。</p>
+</div>
+
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
+<section style="margin-bottom:3.5rem;">
+  <h2 style="font-size:1.75rem;font-weight:bold;color:#ffffff;margin-bottom:1.5rem;">五、病患可以如何執行與追蹤？</h2>
+  <p style="color:#cbd5e1;line-height:1.7;font-size:1.1rem;margin-bottom:1.5rem;">提供具體、保守、安全的執行方式與追蹤指標；不能開立個人處方或保證療效。</p>
+</section>
+
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
+
+<section style="margin-bottom:3.5rem;">
+  <div style="background-color:#fffbeb;border:2px solid #fbbf24;border-radius:1rem;padding:1.5rem;margin:2rem 0;">
+    <h2 style="color:#b45309;margin-top:0;font-weight:bold;font-size:1.4rem;border-bottom:2px solid #fcd34d;padding-bottom:.5rem;">📢 六、常見三大誤區解析</h2>
+    <ul style="list-style:none;padding:0;margin-top:1rem;color:#92400e;">
+      <li style="margin-bottom:1.5rem;"><strong>❌ 誤區一：本主題常見錯誤說法</strong><br><span style="display:block;margin-top:.5rem;line-height:1.6;">用白話更正，並在醫療主張後加入引用。</span></li>
+      <li style="margin-bottom:1.5rem;"><strong>❌ 誤區二：本主題常見錯誤說法</strong><br><span style="display:block;margin-top:.5rem;line-height:1.6;">用白話更正，並說明限制。</span></li>
+      <li style="margin-bottom:0;"><strong>❌ 誤區三：本主題常見錯誤說法</strong><br><span style="display:block;margin-top:.5rem;line-height:1.6;">用白話更正，並告訴讀者正確下一步。</span></li>
+    </ul>
+  </div>
+</section>
+
+<hr style="margin:3rem 0;border-top:1px solid #e2e8f0;">
 
 <section style="background-color:#0f172a;border:1px solid #1e293b;border-radius:1.5rem;overflow:hidden;margin:3rem 0;">
   <div style="background-color:#1e293b;padding:1rem 1.5rem;border-bottom:1px solid #334155;">
@@ -77,7 +118,12 @@ const ARTICLE_CODE_TEMPLATE = `{
   <div style="padding:2rem 1.25rem 1.2rem;">
     <h3 style="color:#f8fafc;margin-top:0;margin-bottom:.75rem;font-size:1.2rem;font-weight:bold;">Q1：民眾最常問的問題？</h3>
     <p style="color:#94a3b8;line-height:1.8;font-size:1.05rem;margin-bottom:2rem;">清楚回答，必要時加入引用。</p>
-    <!-- 共 4 至 6 題 -->
+    <h3 style="color:#f8fafc;margin-top:0;margin-bottom:.75rem;font-size:1.2rem;font-weight:bold;">Q2：第二個常見問題？</h3>
+    <p style="color:#94a3b8;line-height:1.8;font-size:1.05rem;margin-bottom:2rem;">清楚回答，必要時加入引用。</p>
+    <h3 style="color:#f8fafc;margin-top:0;margin-bottom:.75rem;font-size:1.2rem;font-weight:bold;">Q3：第三個常見問題？</h3>
+    <p style="color:#94a3b8;line-height:1.8;font-size:1.05rem;margin-bottom:2rem;">清楚回答，必要時加入引用。</p>
+    <h3 style="color:#f8fafc;margin-top:0;margin-bottom:.75rem;font-size:1.2rem;font-weight:bold;">Q4：什麼情況需要看醫師？</h3>
+    <p style="color:#94a3b8;line-height:1.8;font-size:1.05rem;margin-bottom:0;">提供安全、清楚而不誇大的就醫建議。</p>
   </div>
 </section>
 
@@ -96,7 +142,7 @@ const ARTICLE_CODE_TEMPLATE = `{
 <div style="background-color:#f8fafc;padding:1.5rem;border-radius:.75rem;margin-top:1.5rem;font-size:.95rem;color:#475569;border:1px solid #e2e8f0;line-height:1.6;word-break:break-all;">
   <ol style="padding-left:0;margin:0;list-style-type:decimal;list-style-position:inside;color:#2563eb;font-weight:bold;">
     <li style="margin-bottom:.8rem;"><span style="color:#475569;font-weight:normal;margin-left:.5rem;">作者（年份）。論文標題。期刊。<a href="真實 DOI、PubMed 或 PMC 網址" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;text-underline-offset:3px;">DOI / PubMed / PMC</a></span></li>
-    <!-- 至少列出 10 篇，而且編號必須與內文引用一致 -->
+    <!-- 逐篇完整列出 8 至 12 篇已查證的論文；若直接相關論文不足可少於 8 篇，但不可用新聞、部落格或診所網頁湊數。編號必須與內文引用一致。 -->
   </ol>
 </div>
   \`
@@ -121,12 +167,12 @@ ${sourceSignals || '目前沒有來源線索，請自行查找可驗證的一手
 
 【研究與醫療安全要求】
 1. 先查證資料再寫作，優先使用 PubMed、PMC、DOI 原始論文、系統性回顧、醫學會或政府官方資料。
-2. 優先查找至少 10 篇直接相關、可驗證的參考資料；不足時寧可少列並清楚說明限制，不可為了湊數杜撰。內文重要醫療主張、數字與治療效果後要用 [1]、[2] 形式標註，編號必須與 referencesHtml 完全一致。
+2. 優先查找 8 至 12 篇直接相關、可驗證的學術論文；至少應有 6 篇。參考文獻只能列學術論文、系統性回顧、統合分析或正式臨床指引，不可以新聞、診所網頁、部落格、Wikipedia、社群貼文或搜尋結果頁湊數。每篇都要有可開啟的 DOI、PubMed 或 PMC 網址；不足時寧可少列並清楚說明限制，不可杜撰。內文重要醫療主張、數字與治療效果後要用 [1]、[2] 形式標註，編號必須與 referencesHtml 完全一致。
 3. 最前面的「總結摘要與核心觀點」至少引用 3 篇不同文獻。
 4. 絕對不可捏造作者、年份、論文、DOI、PubMed/PMC 編號、網址、統計數字或名人案例。無法查證的內容不要寫，或明確標示「需人工查證」。
 5. 不得做個人診斷、保證療效或提供取代就醫的處方；需列出警訊、就醫時機與醫療安全提醒。
 6. 臨床觀點只能寫一般性觀察，不可捏造病人故事，也不可替林醫師創造未提供的專長或經歷。
-7. 全文需有 6 至 8 個主要章節、重點比較表、三大常見誤區、4 至 6 題 FAQ、結語與行動建議。
+7. 全文需有 6 至 8 個主要章節、至少 2 個臨床獨特見解卡片、重點比較表、警訊提醒卡、三大常見誤區、4 至 6 題 FAQ、結語與行動建議、醫療安全提醒。章節之間使用範本的 hr。
 8. 用台灣一般民眾看得懂的繁體中文，多說明結論、能怎麼做與何時該就醫；少用英文與艱深術語，必要術語先用白話解釋。
 9. 不要在正文逐篇交代研究是哪國、什麼設計或收了多少人；研究出處與方法細節放參考資料，正文重點是合理結論及限制。
 10. 時事須核對事件日期與報導日期。新聞、Threads、廣告及搜尋入口只是線索，不是療效證據或已證實的搜尋熱度。不能捏造球星傷勢與病史。
@@ -138,7 +184,7 @@ ${sourceSignals || '目前沒有來源線索，請自行查找可驗證的一手
 - contentHtml 與 referencesHtml 必須使用反引號包住。
 - 所有欄位都必須是靜態文字，keywords 是文字陣列；不要 import、函式、JSX、React 元件、動態插值或額外的可執行程式。反引號內若需反引號字元請正確跳脫。
 - 不要留下「正文待補」、假連結或範例文字。正文沒有實際圖片時不輸出 img 標籤，保留 coverImage 欄位即可。
-- 排版、文字階層、顏色與參考資料格式必須遵循下列範本；依本次主題替換內容，不要照抄範本中的示意文字。
+- 下方是從物件開頭到 referencesHtml 結尾的完整範本，不是摘要版。排版、區塊順序、文字階層、顏色與參考資料格式都必須遵循；依本次主題替換所有示意文字，不可刪除必要區塊或照抄佔位文字。
 
 【文章程式碼範本】
 ${ARTICLE_CODE_TEMPLATE}`;

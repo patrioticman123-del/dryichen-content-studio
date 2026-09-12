@@ -7,9 +7,14 @@ const ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, filename);
 const { readArticleObject } = require('../src/features/content-admin/article-code-parser.ts');
 const { parseExternalArticleCode, buildArticlePrompt, buildClaudeHandoffPrompt } = require('../src/features/content-admin/article-prompt.ts');
-const { generateFreeDraft, FREE_DRAFT_MODEL, FREE_DRAFT_MODELS } = require('../src/features/content-admin/free-draft.ts');
+const { generateFreeDraft, FREE_DRAFT_MODEL, FREE_DRAFT_MODELS, FREE_DRAFT_RESEARCH_MODEL, validateDraftArticle } = require('../src/features/content-admin/free-draft.ts');
 const article = { id: 'test-knee', title: '膝蓋疼痛：測試文章', lastModified: '2026-09-12', category: '衛教文章', date: '2026-09-12', summary: '只供測試的摘要', coverImage: '', seoTitle: '膝痛', seoDescription: '測試', keywords: ['膝痛', '復健'], contentHtml: '<h2>一、重點</h2><p>只供測試的文章。</p>', referencesHtml: '<ol><li>尚未查證</li></ol>' };
 const topic = { id: 'unit-test-topic', title: article.title, category: '復健', summary: article.summary, rationale: '測試', sources: [], longTailKeywords: ['膝蓋痛'], score: { total: 80 }, status: 'new' };
+const longText = '這是測試用的完整白話醫療衛教內容，清楚說明適用條件、限制與需要就醫的時機，不能取代醫師診斷。'.repeat(22);
+const completeReferences = `<h2>📚 參考文獻 (References)</h2><ol>${Array.from({ length: 6 }, (_, index) => `<li>測試作者（2025）。測試論文 ${index + 1}。測試期刊。<a href="https://pubmed.ncbi.nlm.nih.gov/${10000000 + index}/">PubMed</a></li>`).join('')}</ol>`;
+const completeContent = `<div><h2>📝 總結摘要與核心觀點</h2><p>${longText}<sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000000/">[1]</a></sup><sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000001/">[2]</a></sup><sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000002/">[3]</a></sup></p></div><hr>${Array.from({ length: 6 }, (_, index) => `<section><h2>${index + 1}、完整章節</h2><p>${longText}<sup><a href="https://pubmed.ncbi.nlm.nih.gov/${10000000 + (index % 6)}/">[${(index % 6) + 1}]</a></sup></p>${index === 1 ? '<div class="custom-table-container"><table class="modern-table"><thead><tr><th>項目</th></tr></thead><tbody><tr><td>內容</td></tr></tbody></table></div>' : ''}${index === 2 ? '<div>⚠️ 需要儘快就醫的警訊</div>' : ''}</section><hr>`).join('')}<div><h4>💡 臨床獨特見解 #1</h4></div><div><h4>💡 臨床獨特見解 #2</h4></div><section><h2>📢 常見三大誤區解析</h2></section><section><h2>🏆 FAQ 常見問題</h2>${Array.from({ length: 4 }, (_, index) => `<h3>Q${index + 1}：常見問題</h3><p>完整回答。</p>`).join('')}</section><div><h2>結語與行動建議</h2><p>安全的下一步。</p></div><div><strong>醫療安全提醒：</strong>本文不能取代診斷。</div>`;
+const complete = { ...article, contentHtml: completeContent, referencesHtml: completeReferences };
+const researchResponse = () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '已查得六篇以上的 PubMed 論文，以下逐篇整理作者、年份、標題、研究限制及可支持的結論。'.repeat(12) }] }, groundingMetadata: { groundingChunks: [{ web: { title: 'PubMed', uri: 'https://pubmed.ncbi.nlm.nih.gov/10000000/' } }] } }] }));
 
 test('accepts JSON, fenced JSON, JS templates, escaped strings and trailing comma', () => {
   assert.deepEqual(parseExternalArticleCode(JSON.stringify(article)), article);
@@ -33,37 +38,46 @@ test('Claude handoff includes topic, complete layout, draft and user changes wit
   const prompt = buildClaudeHandoffPrompt(buildArticlePrompt(topic), article, '多寫就醫時機');
   assert.match(prompt, /多寫就醫時機/); assert.match(prompt, /modern-table/); assert.match(prompt, /重新上網查證/); assert.match(prompt, /test-knee/);
   assert.match(prompt, /少用英文/); assert.match(prompt, /不足時寧可少列/);
+  assert.match(prompt, /臨床獨特見解 #2/); assert.match(prompt, /Q4：什麼情況需要看醫師/); assert.match(prompt, /至少應有 6 篇/);
   assert.doesNotMatch(buildClaudeHandoffPrompt('base'), /test-knee/);
 });
 
-test('Gemini returns a genuine complete draft with no search tools or paid fallback', async () => {
+test('strict draft validation requires the full layout and scholarly references', () => {
+  assert.doesNotThrow(() => validateDraftArticle(complete));
+  assert.throws(() => validateDraftArticle(article), /格式或論文查證未達標/);
+  assert.throws(() => validateDraftArticle({ ...complete, referencesHtml: '<ol><li><a href="https://example.com/news">新聞</a></li></ol>' }), /學術論文/);
+});
+
+test('Gemini researches first, returns a complete draft and never uses a paid fallback', async () => {
   const previousFetch = global.fetch; const previousKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = 'test-key-not-real';
-  const complete = { ...article, contentHtml: Array.from({ length: 5 }, (_, index) => `<h2>${index + 1}、完整段落</h2><p>${'這是測試用的白話內容，不是醫療建議。'.repeat(30)}</p>`).join('') };
   let calls = 0;
   global.fetch = async (url, options) => {
-    calls++; assert.ok(url.includes(FREE_DRAFT_MODEL)); assert.equal(options.headers['x-goog-api-key'], 'test-key-not-real');
-    const request = JSON.parse(options.body); assert.equal(request.tools, undefined); assert.equal(request.generationConfig.responseMimeType, 'application/json');
+    calls++; assert.equal(options.headers['x-goog-api-key'], 'test-key-not-real');
+    const request = JSON.parse(options.body);
+    if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) { assert.deepEqual(request.tools, [{ google_search: {} }]); return researchResponse(); }
+    assert.ok(url.includes(FREE_DRAFT_MODEL)); assert.equal(request.tools, undefined); assert.equal(request.generationConfig.responseMimeType, 'application/json'); assert.match(request.contents[0].parts[0].text, /論文查證資料包/);
     return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'hidden thought', thought: true }, { text: JSON.stringify(complete) }] } }] }));
   };
   try {
     const first = await generateFreeDraft(topic);
-    assert.equal(first.article.title, article.title); assert.equal(first.model, FREE_DRAFT_MODEL); assert.equal(calls, 1);
+    assert.equal(first.article.title, article.title); assert.equal(first.model, FREE_DRAFT_MODEL); assert.equal(calls, 2);
     global.fetch = async () => { calls++; return new Response('{}', { status: 429 }); };
-    await assert.rejects(generateFreeDraft(topic), /免費額度/); assert.equal(calls, 2);
+    await assert.rejects(generateFreeDraft(topic), /免費論文搜尋額度/); assert.equal(calls, 3);
     let fallbackCalls = 0;
     global.fetch = async (url) => {
       fallbackCalls++;
-      if (fallbackCalls === 1) { assert.ok(url.includes(FREE_DRAFT_MODELS[0])); return new Response('{}', { status: 503 }); }
+      if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) return researchResponse();
+      if (fallbackCalls === 2) { assert.ok(url.includes(FREE_DRAFT_MODELS[0])); return new Response('{}', { status: 503 }); }
       assert.ok(url.includes(FREE_DRAFT_MODELS[1]));
       return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(complete) }] } }] }));
     };
     const fallback = await generateFreeDraft(topic);
-    assert.equal(fallback.model, FREE_DRAFT_MODELS[1]); assert.equal(fallbackCalls, 2);
-    global.fetch = async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] }));
+    assert.equal(fallback.model, FREE_DRAFT_MODELS[1]); assert.equal(fallbackCalls, 3);
+    global.fetch = async (url) => url.includes(FREE_DRAFT_RESEARCH_MODEL) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] }));
     await assert.rejects(generateFreeDraft(topic), /截斷/);
-    global.fetch = async () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));
-    await assert.rejects(generateFreeDraft(topic), /短文或模板/);
+    global.fetch = async (url) => url.includes(FREE_DRAFT_RESEARCH_MODEL) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));
+    await assert.rejects(generateFreeDraft(topic), /格式或論文查證未達標/);
   } finally { global.fetch = previousFetch; if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey; }
 });
 

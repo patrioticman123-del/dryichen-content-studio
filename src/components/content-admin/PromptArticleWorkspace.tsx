@@ -108,11 +108,11 @@ export default function PromptArticleWorkspace({ topic, prompt }: { topic: Conte
 
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="text-lg font-black text-slate-900">1. 免費 AI 試寫與預覽（可略過）</h2>
-      <p className="text-sm leading-6 text-slate-500">模型順序：{model || '確認設定中…'}。先用新版 Flash；遇到服務錯誤或不完整輸出才改用免費 Flash-Lite。免費額度不足時停止，不切換付費模型。工作台每天最多試寫 10 次，已完成初稿可重複查看。</p>
-      <p className="rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-800">免費初稿沒有即時搜尋查證，不能直接當成正式衛教文章。Google 免費服務可能使用輸入改善產品，請勿提供患者個資。</p>
+      <p className="text-sm leading-6 text-slate-500">模型流程：{model || '確認設定中…'}。先搜尋並整理論文，再依完整文章範本寫作；新版 Flash 遇到服務錯誤或格式未達標，才改用免費 Flash-Lite。免費額度不足時停止，不切換付費模型。工作台每天最多試寫 10 次，已完成初稿可重複查看。</p>
+      <p className="rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-800">初稿會使用 Google Search 尋找 DOI、PubMed 或 PMC 論文，並自動檢查必要版型與引用數量；搜尋與模型仍可能理解錯誤，發布前必須人工打開論文核對。Google 免費服務可能使用輸入改善產品，請勿提供患者個資。</p>
       {configured === false && <p className="text-sm text-amber-700">目前尚未設定 Gemini 金鑰，下方 Claude 流程仍可直接使用。</p>}
       <button type="button" onClick={() => draft?.article ? reveal(draft.article, 'free') : generateDraft()} disabled={(!draft?.article && configured !== true) || working} className={`${button} bg-teal-600 text-white hover:bg-teal-700`}>{working ? '正在試寫，請稍候…' : draft?.article ? '查看已完成的免費初稿' : '免費 AI 產生初稿並預覽'}</button>
-      {working && <p role="status" className="text-sm leading-6 text-teal-700">可能需要 1–4 分鐘，建議保持此頁開啟。完成後自動顯示預覽；若切換 App 回來，請檢查初稿狀態。</p>}
+      {working && <p role="status" className="text-sm leading-6 text-teal-700">會先搜尋論文再寫完整文章，可能需要 2–5 分鐘。建議保持此頁開啟；若切換 App 回來，請按「檢查初稿狀態」，不要連續重按。</p>}
       {(draft?.article || draft?.status === 'failed') && <button type="button" onClick={() => generateDraft(true)} disabled={working || configured !== true} className={`${button} border border-slate-300 text-slate-600`}>重新試寫一版</button>}
       <button type="button" onClick={() => loadDraft().then((value) => { if (value?.article) reveal(value.article, 'free'); }).catch((reason) => setError(reason.message))} className="min-h-11 text-sm font-bold text-teal-700 underline">檢查初稿狀態</button>
       {draft?.error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{draft.error}</p>}
@@ -120,6 +120,7 @@ export default function PromptArticleWorkspace({ topic, prompt }: { topic: Conte
 
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="text-lg font-black text-slate-900">2. 交給 Claude 正式撰寫</h2>
+      <p className="text-sm leading-6 text-slate-500">一鍵複製的提示詞包含完整文章物件、所有 HTML 版型區塊、論文規則，以及你勾選的免費初稿，不再只是簡化骨架。</p>
       <label className="block text-sm font-bold text-slate-700">你想保留或修改的地方<textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} maxLength={8000} rows={4} className="mt-2 w-full rounded-xl border border-slate-300 p-3 text-sm font-normal leading-6" placeholder="例如：保留比較表，正文再白話一些；少寫研究細節，多說病患應該怎麼做。" /></label>
       {draft?.article && <label className="flex items-center gap-3 text-sm leading-6 text-slate-600"><input type="checkbox" checked={includeDraft} onChange={(event) => setIncludeDraft(event.target.checked)} className="h-5 w-5" />把免費初稿一起交給 Claude，並要求重新查證</label>}
       <button type="button" onClick={copyPrompt} className={`${button} bg-teal-600 text-white hover:bg-teal-700`}>一鍵複製 Claude 完整提示詞</button>
