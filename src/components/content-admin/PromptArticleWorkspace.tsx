@@ -108,7 +108,7 @@ export default function PromptArticleWorkspace({ topic, prompt }: { topic: Conte
 
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <h2 className="text-lg font-black text-slate-900">1. 免費 AI 試寫與預覽（可略過）</h2>
-      <p className="text-sm leading-6 text-slate-500">模型流程：{model || '確認設定中…'}。先搜尋並整理論文，再依完整文章範本寫作；新版 Flash 遇到服務錯誤或格式未達標，才改用免費 Flash-Lite。免費額度不足時停止，不切換付費模型。工作台每天最多試寫 10 次，已完成初稿可重複查看。</p>
+      <p className="text-sm leading-6 text-slate-500">模型流程：{model || '確認設定中…'}。先搜尋並整理論文，再依完整文章範本寫作；3.8 遇到服務錯誤就改用免費 Flash-Lite，若回傳短文或缺少版型，再由免費 2.5 Flash 依錯誤清單修復。全程不切換付費模型。工作台每天最多試寫 10 次，已完成初稿可重複查看。</p>
       <p className="rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-800">初稿會先使用 Google Search 尋找 DOI、PubMed、PMC 或期刊原始論文頁；如果搜尋不足或暫時失敗，仍會繼續寫完整初稿，參考文獻有幾篇就列幾篇，完全沒有時會清楚標示而不捏造。發布前仍必須人工核對。Google 免費服務可能使用輸入改善產品，請勿提供患者個資。</p>
       {configured === false && <p className="text-sm text-amber-700">目前尚未設定 Gemini 金鑰，下方 Claude 流程仍可直接使用。</p>}
       <button type="button" onClick={() => draft?.article ? reveal(draft.article, 'free') : generateDraft()} disabled={(!draft?.article && configured !== true) || working} className={`${button} bg-teal-600 text-white hover:bg-teal-700`}>{working ? '正在試寫，請稍候…' : draft?.article ? '查看已完成的免費初稿' : '免費 AI 產生初稿並預覽'}</button>

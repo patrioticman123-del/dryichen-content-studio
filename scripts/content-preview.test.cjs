@@ -16,6 +16,7 @@ const completeContent = `<div><h2>📝 總結摘要與核心觀點</h2><p>${long
 const complete = { ...article, contentHtml: completeContent, referencesHtml: completeReferences };
 const unreferencedComplete = { ...complete, contentHtml: completeContent.replace(/<sup>[\s\S]*?<\/sup>/g, ''), referencesHtml: '<h2>📚 參考文獻 (References)</h2><p>本次免費搜尋未取得可核對論文，正式使用前必須補查。</p>' };
 const researchResponse = () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '已查得六篇以上的 PubMed 論文，以下逐篇整理作者、年份、標題、研究限制及可支持的結論。'.repeat(12) }] }, groundingMetadata: { groundingChunks: [{ web: { title: 'PubMed', uri: 'https://pubmed.ncbi.nlm.nih.gov/10000000/' } }] } }] }));
+const isResearchCall = (options) => Boolean(JSON.parse(options.body).tools);
 
 test('accepts JSON, fenced JSON, JS templates, escaped strings and trailing comma', () => {
   assert.deepEqual(parseExternalArticleCode(JSON.stringify(article)), article);
@@ -59,33 +60,45 @@ test('Gemini researches first, returns a complete draft and never uses a paid fa
   global.fetch = async (url, options) => {
     calls++; assert.equal(options.headers['x-goog-api-key'], 'test-key-not-real');
     const request = JSON.parse(options.body);
-    if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) { assert.deepEqual(request.tools, [{ google_search: {} }]); return researchResponse(); }
+    if (isResearchCall(options)) { assert.ok(url.includes(FREE_DRAFT_RESEARCH_MODEL)); assert.deepEqual(request.tools, [{ google_search: {} }]); return researchResponse(); }
     assert.ok(url.includes(FREE_DRAFT_MODEL)); assert.equal(request.tools, undefined); assert.equal(request.generationConfig.responseMimeType, 'application/json'); assert.match(request.contents[0].parts[0].text, /論文查證資料包/);
     return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'hidden thought', thought: true }, { text: JSON.stringify(complete) }] } }] }));
   };
   try {
     const first = await generateFreeDraft(topic);
     assert.equal(first.article.title, article.title); assert.equal(first.model, FREE_DRAFT_MODEL); assert.equal(calls, 2);
-    global.fetch = async (url) => {
+    global.fetch = async (url, options) => {
       calls++;
-      if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) return new Response('{}', { status: 429 });
+      if (isResearchCall(options)) return new Response('{}', { status: 429 });
       return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(unreferencedComplete) }] } }] }));
     };
     const withoutResearch = await generateFreeDraft(topic);
     assert.equal(withoutResearch.article.referencesHtml, unreferencedComplete.referencesHtml); assert.equal(calls, 4);
     let fallbackCalls = 0;
-    global.fetch = async (url) => {
+    global.fetch = async (url, options) => {
       fallbackCalls++;
-      if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) return researchResponse();
+      if (isResearchCall(options)) return researchResponse();
       if (fallbackCalls === 2) { assert.ok(url.includes(FREE_DRAFT_MODELS[0])); return new Response('{}', { status: 503 }); }
       assert.ok(url.includes(FREE_DRAFT_MODELS[1]));
       return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(complete) }] } }] }));
     };
     const fallback = await generateFreeDraft(topic);
     assert.equal(fallback.model, FREE_DRAFT_MODELS[1]); assert.equal(fallbackCalls, 3);
-    global.fetch = async (url) => url.includes(FREE_DRAFT_RESEARCH_MODEL) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] }));
+    let repairCalls = 0;
+    global.fetch = async (url, options) => {
+      repairCalls++;
+      if (isResearchCall(options)) return researchResponse();
+      if (url.includes(FREE_DRAFT_MODELS[0])) return new Response('{}', { status: 503 });
+      if (url.includes(FREE_DRAFT_MODELS[1])) return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));
+      assert.ok(url.includes(FREE_DRAFT_MODELS[2]));
+      assert.match(JSON.parse(options.body).contents[0].parts[0].text, /前一個免費模型的輸出未達標/);
+      return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(complete) }] } }] }));
+    };
+    const repaired = await generateFreeDraft(topic);
+    assert.equal(repaired.model, FREE_DRAFT_MODELS[2]); assert.equal(repairCalls, 4);
+    global.fetch = async (_url, options) => isResearchCall(options) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] }));
     await assert.rejects(generateFreeDraft(topic), /截斷/);
-    global.fetch = async (url) => url.includes(FREE_DRAFT_RESEARCH_MODEL) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));
+    global.fetch = async (_url, options) => isResearchCall(options) ? researchResponse() : new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(article) }] } }] }));
     await assert.rejects(generateFreeDraft(topic), /格式或論文查證未達標/);
   } finally { global.fetch = previousFetch; if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey; }
 });
