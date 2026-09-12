@@ -14,6 +14,7 @@ const longText = '這是測試用的完整白話醫療衛教內容，清楚說�
 const completeReferences = `<h2>📚 參考文獻 (References)</h2><ol>${Array.from({ length: 6 }, (_, index) => `<li>測試作者（2025）。測試論文 ${index + 1}。測試期刊。<a href="https://pubmed.ncbi.nlm.nih.gov/${10000000 + index}/">PubMed</a></li>`).join('')}</ol>`;
 const completeContent = `<div><h2>📝 總結摘要與核心觀點</h2><p>${longText}<sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000000/">[1]</a></sup><sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000001/">[2]</a></sup><sup><a href="https://pubmed.ncbi.nlm.nih.gov/10000002/">[3]</a></sup></p></div><hr>${Array.from({ length: 6 }, (_, index) => `<section><h2>${index + 1}、完整章節</h2><p>${longText}<sup><a href="https://pubmed.ncbi.nlm.nih.gov/${10000000 + (index % 6)}/">[${(index % 6) + 1}]</a></sup></p>${index === 1 ? '<div class="custom-table-container"><table class="modern-table"><thead><tr><th>項目</th></tr></thead><tbody><tr><td>內容</td></tr></tbody></table></div>' : ''}${index === 2 ? '<div>⚠️ 需要儘快就醫的警訊</div>' : ''}</section><hr>`).join('')}<div><h4>💡 臨床獨特見解 #1</h4></div><div><h4>💡 臨床獨特見解 #2</h4></div><section><h2>📢 常見三大誤區解析</h2></section><section><h2>🏆 FAQ 常見問題</h2>${Array.from({ length: 4 }, (_, index) => `<h3>Q${index + 1}：常見問題</h3><p>完整回答。</p>`).join('')}</section><div><h2>結語與行動建議</h2><p>安全的下一步。</p></div><div><strong>醫療安全提醒：</strong>本文不能取代診斷。</div>`;
 const complete = { ...article, contentHtml: completeContent, referencesHtml: completeReferences };
+const unreferencedComplete = { ...complete, contentHtml: completeContent.replace(/<sup>[\s\S]*?<\/sup>/g, ''), referencesHtml: '<h2>📚 參考文獻 (References)</h2><p>本次免費搜尋未取得可核對論文，正式使用前必須補查。</p>' };
 const researchResponse = () => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '已查得六篇以上的 PubMed 論文，以下逐篇整理作者、年份、標題、研究限制及可支持的結論。'.repeat(12) }] }, groundingMetadata: { groundingChunks: [{ web: { title: 'PubMed', uri: 'https://pubmed.ncbi.nlm.nih.gov/10000000/' } }] } }] }));
 
 test('accepts JSON, fenced JSON, JS templates, escaped strings and trailing comma', () => {
@@ -44,6 +45,7 @@ test('Claude handoff includes topic, complete layout, draft and user changes wit
 
 test('strict draft validation requires the full layout and scholarly references', () => {
   assert.doesNotThrow(() => validateDraftArticle(complete));
+  assert.doesNotThrow(() => validateDraftArticle(unreferencedComplete));
   assert.doesNotThrow(() => validateDraftArticle({ ...complete, referencesHtml: completeReferences.replace(/https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/10000000\//, 'https://link.springer.com/article/10.1000/test').replace('PubMed</a></li>', 'Journal article (2025)</a></li>') }));
   assert.doesNotThrow(() => validateDraftArticle({ ...complete, referencesHtml: completeReferences.replace(/https:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/10000000\//, 'https://publisher.example.org/record/123').replace('PubMed</a></li>', 'Systematic Review (2025)</a></li>') }));
   assert.throws(() => validateDraftArticle(article), /格式或論文查證未達標/);
@@ -64,8 +66,13 @@ test('Gemini researches first, returns a complete draft and never uses a paid fa
   try {
     const first = await generateFreeDraft(topic);
     assert.equal(first.article.title, article.title); assert.equal(first.model, FREE_DRAFT_MODEL); assert.equal(calls, 2);
-    global.fetch = async () => { calls++; return new Response('{}', { status: 429 }); };
-    await assert.rejects(generateFreeDraft(topic), /免費論文搜尋額度/); assert.equal(calls, 3);
+    global.fetch = async (url) => {
+      calls++;
+      if (url.includes(FREE_DRAFT_RESEARCH_MODEL)) return new Response('{}', { status: 429 });
+      return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(unreferencedComplete) }] } }] }));
+    };
+    const withoutResearch = await generateFreeDraft(topic);
+    assert.equal(withoutResearch.article.referencesHtml, unreferencedComplete.referencesHtml); assert.equal(calls, 4);
     let fallbackCalls = 0;
     global.fetch = async (url) => {
       fallbackCalls++;
