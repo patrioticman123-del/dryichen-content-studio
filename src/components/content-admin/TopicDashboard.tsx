@@ -114,6 +114,9 @@ export default function TopicDashboard({ initialTopics, initialNotice = '' }: { 
             <p className="mt-1 text-xs leading-5 text-slate-500">台灣時間凌晨 00:00 排程；Vercel 免費版可能在 00:00–00:59 之間執行。早上首次開啟也會自動補跑。</p>
           </div>
           <div className="grid shrink-0 gap-2 sm:min-w-44">
+            <button type="button" onClick={() => router.push('/admin/social-posts')} className="min-h-11 rounded-xl bg-teal-700 px-4 text-sm font-black text-white hover:bg-teal-800">
+              社群貼文／圖片工具
+            </button>
             <button type="button" onClick={refreshTopics} disabled={refreshing || rerolling} className="min-h-11 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white disabled:opacity-50">
               {refreshing ? '正在交叉搜尋…' : '檢查今日議題'}
             </button>

@@ -8,6 +8,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 const { readArticleObject } = require('../src/features/content-admin/article-code-parser.ts');
 const { parseExternalArticleCode, buildArticlePrompt, buildClaudeHandoffPrompt } = require('../src/features/content-admin/article-prompt.ts');
 const { generateFreeDraft, FREE_DRAFT_MODEL, FREE_DRAFT_MODELS, FREE_DRAFT_RESEARCH_MODEL, validateDraftArticle } = require('../src/features/content-admin/free-draft.ts');
+const { buildSocialPrompt, parseSocialJson, readPublicArticle } = require('../src/features/content-admin/social-content.ts');
 const article = { id: 'test-knee', title: '膝蓋疼痛：測試文章', lastModified: '2026-09-12', category: '衛教文章', date: '2026-09-12', summary: '只供測試的摘要', coverImage: '', seoTitle: '膝痛', seoDescription: '測試', keywords: ['膝痛', '復健'], contentHtml: '<h2>一、重點</h2><p>只供測試的文章。</p>', referencesHtml: '<ol><li>尚未查證</li></ol>' };
 const topic = { id: 'unit-test-topic', title: article.title, category: '復健', summary: article.summary, rationale: '測試', sources: [], longTailKeywords: ['膝蓋痛'], score: { total: 80 }, status: 'new' };
 const longText = '這是測試用的完整白話醫療衛教內容，清楚說明適用條件、限制與需要就醫的時機，不能取代醫師診斷。'.repeat(22);
@@ -124,8 +125,24 @@ test('durable draft cache coalesces requests, preserves old result on failure an
       await store.finishFreeDraft(`next-${index}`, next.draft.requestId, { error: 'mock failure' });
     }
     await assert.rejects(store.reserveFreeDraft('over-limit', false), /10 次/);
+    for (let index = 0; index < 30; index++) assert.equal(await store.reserveSocialGeneration(), index + 1);
+    await assert.rejects(store.reserveSocialGeneration(), /30 次/);
   } finally {
     if (oldStorage === undefined) delete process.env.CONTENT_ADMIN_STORAGE; else process.env.CONTENT_ADMIN_STORAGE = oldStorage;
     if (path.dirname(directory) === os.tmpdir() && path.basename(directory).startsWith('content-preview-test-')) fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('social prompt differentiates platforms, style, emoji count and source link', () => {
+  const prompt = buildSocialPrompt({ sourceText: '膝蓋疼痛衛教內容'.repeat(20), sourceUrl: 'https://example.com/knee', platforms: ['facebook', 'threads'], style: 'warm', emojiCount: 3 });
+  assert.match(prompt, /Facebook：建議 300–800/); assert.match(prompt, /Instagram：建議 50–200/); assert.match(prompt, /Threads：建議 40–150/);
+  assert.match(prompt, /溫暖關懷/); assert.match(prompt, /目標 3 個/); assert.match(prompt, /https:\/\/example.com\/knee/); assert.match(prompt, /未指定平台回傳空字串/);
+  const result = parseSocialJson(JSON.stringify({ posts: { facebook: '這是一篇完整的 Facebook 測試貼文，提供清楚衛教與下一步。', instagram: '', threads: '這是一篇可以引起討論的 Threads 測試貼文，你怎麼看？' }, image: { eyebrow: '膝蓋衛教', headline: '上下樓膝蓋痛？', subheadline: '先看懂常見原因與就醫時機' } }), ['facebook', 'threads'], 'test-model');
+  assert.equal(result.model, 'test-model'); assert.equal(result.posts.instagram, ''); assert.match(result.image.headline, /膝蓋痛/);
+});
+
+test('public URL reader blocks local and private network targets before fetching', async () => {
+  await assert.rejects(readPublicArticle('http://127.0.0.1/article'), /內部|私人/);
+  await assert.rejects(readPublicArticle('http://localhost/article'), /內部/);
+  await assert.rejects(readPublicArticle('file:///etc/passwd'), /HTTP|HTTPS/);
 });

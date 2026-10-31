@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ArticleCodePreview from './ArticleCodePreview';
+import SocialPostWorkspace from './SocialPostWorkspace';
 import { buildClaudeHandoffPrompt, parseExternalArticleCode, type ExternalArticleCode } from '@/features/content-admin/article-prompt';
 import type { ContentTopic } from '@/features/content-admin/types';
 import type { FreeDraft } from '@/features/content-admin/free-draft-store';
@@ -137,5 +138,6 @@ export default function PromptArticleWorkspace({ topic, prompt }: { topic: Conte
     </section>
     {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">{error}</p>}
     {preview && <div ref={previewRef} className="scroll-mt-4"><ArticleCodePreview article={preview.article} isDraft={preview.kind === 'free'} /></div>}
+    <SocialPostWorkspace article={preview?.article || draft?.article} embedded />
   </div>;
 }

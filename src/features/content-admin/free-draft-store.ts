@@ -5,7 +5,7 @@ import { createPool } from '@vercel/postgres';
 import type { ExternalArticleCode } from './article-prompt';
 
 export interface FreeDraft { topicId: string; status: 'running' | 'completed' | 'failed'; updatedAt: string; requestId: string; article?: ExternalArticleCode; model?: string; error?: string }
-interface DraftStore { records: Record<string, FreeDraft>; usage: Record<string, number> }
+interface DraftStore { records: Record<string, FreeDraft>; usage: Record<string, number>; socialUsage?: Record<string, number> }
 let pool: ReturnType<typeof createPool> | undefined;
 let initialized: Promise<unknown> | undefined;
 let lock = Promise.resolve();
@@ -80,5 +80,16 @@ export async function finishFreeDraft(topicId: string, requestId: string, result
     if (result.article) { draft.article = result.article; draft.model = result.model; }
     draft.error = result.error; draft.status = result.error ? 'failed' : 'completed'; draft.updatedAt = new Date().toISOString();
     return draft;
+  }, true);
+}
+
+export async function reserveSocialGeneration(): Promise<number> {
+  return storage((state) => {
+    const date = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+    state.socialUsage ||= {};
+    if ((state.socialUsage[date] || 0) >= 30) throw new Error('社群工具今日已生成 30 次，請明天再試。');
+    state.socialUsage[date] = (state.socialUsage[date] || 0) + 1;
+    for (const day of Object.keys(state.socialUsage)) if (day < new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)) delete state.socialUsage[day];
+    return state.socialUsage[date];
   }, true);
 }
